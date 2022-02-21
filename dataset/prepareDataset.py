@@ -1,6 +1,5 @@
 import scipy.io
 import os
-
 import numpy as np
 
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]

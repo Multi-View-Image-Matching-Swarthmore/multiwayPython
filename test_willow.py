@@ -1,6 +1,7 @@
 import sys
 from dataset.prepareDataset import extractFiles
 from dataset.getDataset import getDataset
+from pairwiseMatchingUtil import runGraphMatchBatch
 
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
 
@@ -27,7 +28,17 @@ def main():
     print(classesToRun)
 
     getDataset(classesToRun)
+
     # Pairwise matching
+    # if pairwise matching file exists, load it in
+    # exists at result/willow/imageSet/match_kpts.npy
+
+    #i if not, create it
+    # to apply linear matching, set 'wEdge' as 0;
+    # to apply graph matching, set wEdge as an nonzero number, e.g., 1
+    # pMatch = runGraphMatchBatch(numpy files,hypercols_kpts,'all',[],'wEdge', 0);
+    # save(savefile,'pMatch');
+
 
     # construct coordinate matrix C:2*m
 

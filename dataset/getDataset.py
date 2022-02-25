@@ -11,6 +11,7 @@ def getDataset(imageClasses):
         for f in files:
             nparr = np.load(filepath + "/" + f)
             print(nparr.shape)
+            # row column coordinates for points of interest
             exit()
 
 if __name__ == '__main__':

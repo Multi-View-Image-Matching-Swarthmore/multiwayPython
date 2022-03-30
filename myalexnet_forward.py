@@ -15,12 +15,11 @@
 # Modified by Carlos Esteves for deep feature extraction
 # 2017-01-17 16:45:43
 #
-
 from numpy import *
 import os
 from pylab import *
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # bad
 import matplotlib.cbook as cbook
 import time
 from scipy.misc import imread
@@ -29,7 +28,6 @@ import matplotlib.image as mpimg
 from scipy.ndimage import filters
 import urllib
 from numpy import random
-
 
 import tensorflow as tf
 

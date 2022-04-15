@@ -14,7 +14,7 @@ def torusCoords(num, max):
 # (numpy files,hypercols_kpts,'all',[],'wEdge', 0)
 # datapath = class
 # viewlist = hypercols files in class
-def runGraphMatchBatch(datapath,viewList,pairingMode,pairingParam):
+def runGraphMatchBatch(datapath,viewList,pairingMode,wEdge=0):
     #     % Options:
     # % pairingMode = 'all' | 'loop' | 'neighbor'
     # % pairingParam = ...
@@ -81,7 +81,7 @@ def runGraphMatchBatch(datapath,viewList,pairingMode,pairingParam):
                 # print("running graph matching")
                 viewPair = (viewList[i], viewList[j])
                 # print(i , j)
-                matchData = graphMatch(viewPair)
+                matchData = graphMatch(viewPair, wEdge)
                 # print(matchData)
                 matchData.filename = (viewList[i], viewList[j])
                 # fix print statement
@@ -151,7 +151,10 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
     # discretization
     # print("discretization...")
     if methodDisc == "greedy":
+        # print(mData.matchInfo)
         X = greedyMatch(mData.matchInfo, Xraw)
+        # print(mData.matchInfo)
+        # exit()
     elif methodDisc == "hungary": #spelling ?
         # X = optimalMatch(mData.matchInfo, Xraw)
         print("Implementation not finished: hungary")
@@ -227,6 +230,7 @@ def greedyMatch(match, score, nMax=np.inf):
     # print(score.shape)
 
     count = 0
+    score = score.copy()
     max_ind = np.argmax(score)
     max_value = score[max_ind]
     # print(max_value)

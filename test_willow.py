@@ -4,6 +4,7 @@ import scipy.io
 from dataset.prepareDataset import extractFiles
 from dataset.getDataset import getDataset
 from pairwiseMatchingUtil import runGraphMatchBatch
+from multiObjectMatchingUtil import runJointMatch
 # import pdb;  pdb.set_trace()
 
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
@@ -29,7 +30,7 @@ def main():
             print("Invalid Image Set:", imageSet)
             exit()
 
-    print(classesToRun)
+    # print(classesToRun)
     viewList = []
     datapath = classesToRun[0]
     datasetFilePath = os.getcwd() + "/dataset/WILLOW-ObjectClass/"
@@ -37,34 +38,31 @@ def main():
     for f in files:
         if f.endswith(".hypercols_kpts.mat"):
             viewList.append(datasetFilePath + datapath + "/" + f)
-    savefile = os.getcwd() + "/results/" + classesToRun[0] + "/match_kpts.npz" # eventually change to every class run
+    savefile = os.getcwd() + "/results/" + classesToRun[0] + "/match_kpts.npy" # eventually change to every class run
 
     # Pairwise matching
     # if pairwise matching file exists, load it in
+    print("Pairwise Matching")
     pMatch = None
 
     if os.path.exists(savefile):
-        pMatch = np.load(savefile)
+        pMatch = np.load(savefile, allow_pickle=True, fix_imports=True)
+        # print(pMatch.shape)
+        # exit()
     else: # calculate matches
         datapath = classesToRun[0]
         # print(savefile)
-        pMatch = runGraphMatchBatch(datapath,viewList,'all','wEdge');
-        np.savez(savefile, pMatch)
+        pMatch = runGraphMatchBatch(datapath,viewList,'all', wEdge=0);
+        # print(pMatch.shape)
+        np.save(savefile, pMatch, allow_pickle=True, fix_imports=True)
 
-    print(pMatch)
+    # print(pMatch.shape)
+
+    # exit()
 
     # construct coordinate matrix C:2*m
     # 2xm matrix
-
-    # for i = 1:length(viewList)
-    # views(i) = load(sprintf('%s/%s',datapath,viewList{i}));
-    # cnt(:,i) = sum(views(i).frame,2)/double(views(i).nfeature);
-    # C = [C,views(i).frame - repmat(cnt(:,i),1,views(i).nfeature)];
-    # concates horizontally
-    # C and views i - repmat
-
-    # repmat(cnt(:,i),     1,    views(i).nfeature)
-
+    print("Constructing Coordinate Matrix")
     C = None
     cNotSet = True # very scuffed way of adding numpy array
     cnt = np.zeros((2, len(viewList)))
@@ -93,9 +91,12 @@ def main():
     # print(cnt.shape)
     # print(C.shape)
     # print(C)
-    exit()
 
     # Multi-Object Matching
+    print("Multi Object Matching")
+    jMatch,jmInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
+
+    exit()
 
     # Evaluate
 

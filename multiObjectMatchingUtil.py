@@ -2,6 +2,12 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 from scipy.sparse import csr_matrix
 import time
+import sys
+
+import scipy.io
+
+from pairwiseMatchingUtil import greedyMatch
+from classes import pairwiseMatches, jointMatchInfo
 
 #runJointMatch(pMatch,C,'Method','pg','univsize',10, 'rank',3,'lambda', 1);
 # add documentation again
@@ -36,7 +42,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     # print(nFeature.shape)
     # exit()
     nFeatureWithZero = np.insert(nFeature, 0, 0)
-    cumulativeIndex = np.cumsum(nFeatureWithZero) # check
+    cumulativeIndex = np.cumsum(nFeatureWithZero).astype(int)
     # print(cumulativeIndex)\
 
     # print(pMatch)
@@ -127,7 +133,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     if method == "spectral":
         print("Spectral Matching...")
-        m_out, eigV, tInfo = spectralMatch(vM, nFeature, Size)
+        M_out, eigV, tInfo = spectralMatch(vM, nFeature, Size)
     elif method == "matchlift":
         print("matchlift (MatchLift) not implemented! Sorry!")
         exit()
@@ -141,9 +147,95 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         print("Unkown Multi-Object Matching method:", method)
         exit()
 
+    # check M_out
+    # M_out is wrong !!!
+    mat = scipy.io.loadmat("M_out.mat")
+    matlabM_out = np.array(mat['M_out'])
+
+    compare = matlabM_out == M_out
+
+    print(matlabM_out.shape)
+    print(M_out.shape)
+    print(np.sum(matlabM_out))
+    print(np.sum(M_out))
+    print(compare.all())
+
+    exit()
+
+    for r in range(400):
+        for c in range(400):
+            if not compare[r][c]:
+                print("not equal: ", r, c)
+                print("Matlab:", matlabM_out[r][c])
+                print("Python:", M_out[r][c])
+                exit()
+    exit()
+
+    # output/save files?
+    jMatch = np.empty((pDim, pDim), dtype=pairwiseMatches)
+
+    for i in range(pDim): # check
+        for j in range(i+1, pDim):
+            print()
+            # [ind1,ind2] = find(   M_out( csum(i)+1:csum(i+1) , csum(j)+1:csum(j+1) )   );
+            # return row, col of the nonzero elements indices
+            rowStart = cumulativeIndex[i] + 1
+            rowStop = cumulativeIndex[i+1]
+            colStart = cumulativeIndex[j] + 1
+            colStop = cumulativeIndex[j+1]
+
+            print(rowStart, rowStop)
+            print(colStart, colStop)
+
+            subMatrix = M_out[rowStart:rowStop, colStart:colStop]
+            ind1, ind2 = np.nonzero(subMatrix)
+
+            print(ind1.shape)
+            print(ind1)
+
+            exit()
+
+            # if ind1 is not empty aka has nonzero elements
+            # if matrix has nonzero elements
+            if ind1.shape[0] > 0:
+                # remove conflict
+                # Xraw = vM(csum(i)+1:csum(i+1),csum(j)+1:csum(j+1));
+                Xraw = vM[rowStart:rowStop, colStart:colStop]
+
+                # # TODO: help
+                # Xraw = Xraw(sub2ind(size(Xraw),ind1,ind2));
+                # https://stackoverflow.com/questions/15230179/how-to-get-the-linear-index-for-a-numpy-array-sub2ind
+                Xraw = Xraw
+
+                # X = greedyMatch([ind1';ind2'],Xraw);
+                # def greedyMatch(match, score, nMax=np.inf):
+                arr = np.concatenate(ind1.T, ind2.T, axis=1) # double check axis?
+                X = greedyMatch(arr, Xraw)
+
+                # store results
+                # jMatch(i,j).matchInfo.match = [ind1';ind2'];
+                # jMatch(i,j).X = X;
+                # jMatch(i,j).Xraw = Xraw;
+                # jMatch(i,j).filename = [filename(i),filename(j)];
+                f = np.array([filename[i], filename[j]])
+
+                # jMatch(i,j).nFeature = [nFeature(i),nFeature(j)];
+                nf = np.array([nFeature[i], nFeature[j]])
+
+                jMatch[i][j] = pairwiseMatches(arr, nf, Xraw, X)
+                jMatch[i][j].filename = f
+
+    # jmInfo.eigV = eigV;
+    # jmInfo.nFeature = csum;
+    # jmInfo.filename = filename;
+    # jmInfo.time = timeInfo.time;
+    # jmInfo.Z = Z;
+    jmInfo = jointMatchInfo(eigV, cumulativeIndex, filename, tInfo, Z)
 
     print("end")
     exit()
+
+    return jMatch,jmInfo,tInfo
 
 # [M_out,eigV,timeInfo] = mmatch_spectral(vM,nFeature,Size);
 def spectralMatch(W, nFeature, universeSize):
@@ -167,15 +259,29 @@ def spectralMatch(W, nFeature, universeSize):
     #NOTE: V[:, :k] is the same as V
     V = np.real(V)
     Y = rounding(V, nFeature, threshold=0.5).astype(np.float32)
-    print(Y)
+    # check Y
+    mat = scipy.io.loadmat("Y.mat")
+    matlabY = np.array(mat['Y'])
+
+    compare = matlabY == Y
+
+    # why are they different sizes
+    print(matlabY.shape)
+    print(Y.shape)
+    # print(np.sum(matlabM_out))
+    # print(np.sum(M_out))
+    print(compare)
     exit()
-    X = Y@Y.T
+    # print(Y)
+    # exit()
+    X = np.matmul(Y,Y.T)
     end = time.time()
 
     runtime = end - start
-    exit()
+    print(runtime)
+    # exit()
 
-    return X, Y, runtime
+    return X, V, runtime
 
 #Y = rounding(V(:,1:k),dimGroup,0.5);
 def rounding(A, dimGroup, threshold=0.5): # can we just run k means???
@@ -185,17 +291,20 @@ def rounding(A, dimGroup, threshold=0.5): # can we just run k means???
 
     # cumulative sum
     N = np.cumsum(dimGroup).astype(int)
-    # print("A:",A)
-    print("N:", N)
+    print("A:",A.shape)
+    # print("N:", N)
 
     flag = np.zeros((heightA,1)) # indicates in row already has been assigned a max
     Y = np.zeros((heightA, widthA)) # ends up 400 x 16?
     p = -1
+    scores = np.zeros((10))
 
-    print(Y.shape)
+    # print("Y shape:",Y.shape)
+    # print("dim group shape",dimGroup.shape)
 
+    # print("---")
     for i in range(heightA): # every row in A
-        print("i:", i)
+        # print("i:", i)
         if flag[i] == 0:
             p += 1 # column we are on
             if p >= Y.shape[1]: # if we need more columns, add a column
@@ -204,19 +313,53 @@ def rounding(A, dimGroup, threshold=0.5): # can we just run k means???
             flag[i] = 1
             # np.where N>= i, returns group greater than index
             # ob = find(N>=i,1,'first');
-            ob1 = np.where(N > i)[0] # indices of all the groups after i
+            ob1 = np.where(N > i)[0][:-1] # indices of all the groups after i
+            # -1 needed ???
             # exit()
             currentRow = A[i]
-            print("current row index:", i)
-            print("current row:",currentRow)
-            exit()
-            # for groupIndex,group in enumerate(ob1): # for every group after i
-            #     for o in range(dimGroup(N[group])):
-            #         print(A[N[group]])
-            #         score = np.dot(currentRow, A[N[group]])
-            #         print(score)
-            #         exit()
-    exit()
+            # print("\tcurrent row index:", i)
+            # print("current row:",currentRow)
+            # print("\t", ob1)
+            # print("\tnum groups", ob1.shape)
+            # exit()
+            for groupIndex in range(len(ob1)): # for every group after i
+                groupStartIndex = N[groupIndex]
+                # print("\t\tgroup index",groupIndex)
+                # print("group start index", groupStartIndex)
+                # print("contents", A[N[groupStartIndex]])
+                # print(dimGroup[groupStartIndex])
+                groupSize = 10 # HARDCODED VARIBALE, all groups size 10
+                # exit()
+                scores = np.zeros((groupSize,))
+                for rowInGroup in range(groupSize): # for every row in group
+                    row = groupStartIndex + rowInGroup
+                    # print("\t\t\ton", row)
+                    rowContents = A[row]
+                    # print("row contents:", rowContents)
+                    scores[rowInGroup] = np.dot(currentRow, rowContents) # calculate dot product
+                    # print(score)
+                # print(scores)
+
+                j = np.argmax(scores) # find max score
+                # print("\t\tmax score at:",j)
+                if scores[j] > threshold:
+                    Y[groupStartIndex + j][p] = 1
+                    flag[groupStartIndex + j] = 1
+
+            # print(Y)
+            # file = open("file2.txt", "w+")
+            # np.set_printoptions(threshold=sys.maxsize)
+            # content = str(Y)
+            # np.set_printoptions(threshold=None)
+            # file.write(content)
+            # file.close()
+            # print("save Y array")
+            # exit()
+    # print(Y)
+
+    ## TODO: check Y array with matlab
+
+    return Y
 
 def norm_rows(arr):
     return arr/np.linalg.norm(arr, ord=2, axis=1, keepdims=True)

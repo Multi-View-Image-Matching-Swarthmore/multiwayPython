@@ -5,6 +5,7 @@ from dataset.prepareDataset import extractFiles
 from dataset.getDataset import getDataset
 from pairwiseMatchingUtil import runGraphMatchBatch
 from multiObjectMatchingUtil import runJointMatch
+from EvaluationUtil import pMatch2perm, evalMMatch
 # import pdb;  pdb.set_trace()
 
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
@@ -32,12 +33,15 @@ def main():
 
     # print(classesToRun)
     viewList = []
+    imgList = []
     datapath = classesToRun[0]
     datasetFilePath = os.getcwd() + "/dataset/WILLOW-ObjectClass/"
     files = os.listdir(datasetFilePath + datapath + "/")
     for f in files:
         if f.endswith(".hypercols_kpts.mat"):
             viewList.append(datasetFilePath + datapath + "/" + f)
+        elif f.endswith(".png"):
+            imgList.append(datasetFilePath + datapath + "/" + f)
     savefile = os.getcwd() + "/results/" + classesToRun[0] + "/match_kpts.npy" # eventually change to every class run
 
     # Pairwise matching
@@ -98,9 +102,48 @@ def main():
 
     exit()
 
+
     # Evaluate
+    # X1 = pMatch2perm(pMatch); % pairwise matching result
+    X1 = pMatch2perm(pMatch)
+
+    # X2 = pMatch2perm(jMatch); % joint matching result
+    X2 = pMatch2perm(jMatch)
+
+    # n_img = length(imgList);
+    numImages = len(imgList)
+
+    # n_pts = length(X1)/n_img;
+    numPoints = X1.shape[0]/numImages
+
+    # X0 = sparse(repmat(eye(ceil(n_pts)),n_img,n_img)); %groundtruth
+    ## TODO:
+
+    # % evaluate [overlap, precision, recall]
+    # [o1,p1,r1] = evalMMatch(X1,X0);
+    o1, p1, r1 = evalMMatch(X1, X0)
+
+    # [o2,p2,r2] = evalMMatch(X2,X0);
+    o2, p2, r2 = evalMMatch(X2, X0)
+
 
     # Visualize
+    # if showmatch
+    #     %view pairwise matches
+    #     for i = 1:size(pMatch,1)
+    #         for j = i+1:size(pMatch,2)
+    #             clf;
+    #             if ~isempty(pMatch(i,j).X)
+    #                 subplot('position',[0 0.5 1 0.48]);
+    #                 visPMatch(datapath,pMatch(i,j),3,'th',0.01);
+    #                 subplot('position',[0 0 1 0.48]);
+    #                 visPMatch(datapath,jMatch(i,j),3,'th',0.01);
+    #                 fprintf('%d-%d\n',i,j);
+    #                 pause
+    #             end
+    #         end
+    #     end
+    # end
 
 if __name__ == '__main__':
     main()

@@ -107,14 +107,13 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
     # exit()
 
     # load preprocessed data into class
-    mData = pairwiseMatches()
-    mData.matchInfo = matchInds
+    matchInfo = matchInds
 
     # number of features
     viewMat1 = scipy.io.loadmat(viewPair[0])
-    mData.nFeature = viewMat1['nfeature'][0][0]
+    nFeature = viewMat1['nfeature'][0][0]
 
-    if len(mData.matchInfo) == 0: # if match list is empty, exit method
+    if len(matchInfo) == 0: # if match list is empty, exit method
         return mData
 
     # graph matching to introduce geometric constraint
@@ -128,8 +127,8 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
 
         # do some spooky math
-        print(mData.matchInfo.shape) # 100, 2
-        unique_features1, new_feat1 = np.unique(mData.matchInfo[:,0], return_inverse=True)
+        print(matchInfo.shape) # 100, 2
+        unique_features1, new_feat1 = np.unique(matchInfo[:,0], return_inverse=True)
         print(unique_features1)
         print(new_feat1)
         # increasing order
@@ -152,7 +151,7 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
     # print("discretization...")
     if methodDisc == "greedy":
         # print(mData.matchInfo)
-        X = greedyMatch(mData.matchInfo, Xraw)
+        X = greedyMatch(matchInfo, Xraw)
         # print(mData.matchInfo)
         # exit()
     elif methodDisc == "hungary": #spelling ?
@@ -164,6 +163,8 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
     mData.Xraw = np.array(Xraw).astype(np.float32)
     mData.X = X
+
+    mData = pairwiseMatches(matchInfo, nFeature, Xraw, X)
 
     return mData
 

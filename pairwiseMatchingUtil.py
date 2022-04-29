@@ -4,23 +4,38 @@ import scipy.io
 from classes import pairwiseMatches
 import tqdm
 
+
+'''
+Calculate Torus-like numbers
+Helps with calculating pairing matrix
+Inputs:
+- num: raw number to figure out new coordinate
+- max: maximum size of torus
+
+Outputs:
+- new coordinate, given the wrap around of torus
+'''
 def torusCoords(num, max):
     if num < 0 or num >= max:
         return num % max
     else:
         return num
 
+'''
+Run Graph Matching on a batch of images
+Inputs:
+- datapath: filepath to image class (ex. Car)
+- viewList: list of hypercols files for class (files end with hypercols_kpts.mat)
+- pairingMode: type of pairing mode for matches matrix (all, loop, neighbor)
+- pairingParam: the radius of the neighborhood if pairing mode is loop or neighbor
+- wEdge: type of linear/graph matching (0, 1, 2, ect)
 
-# (numpy files,hypercols_kpts,'all',[],'wEdge', 0)
-# datapath = class
-# viewlist = hypercols files in class
-def runGraphMatchBatch(datapath,viewList,pairingMode,wEdge=0):
-    #     % Options:
-    # % pairingMode = 'all' | 'loop' | 'neighbor'
-    # % pairingParam = ...
-    # % the radius of neighnorhood, if pairingMode == 'loop' and 'neighbor'
-    # % a binary matrix indicating the pairs to match, if pairingMode == 'userinput'
+Outputs:
+- pairMatches: Numpy array of pairwiseMatches class, shape is (len(viewList), len(viewList))
+'''
+def runGraphMatchBatch(datapath,viewList,pairingMode, pairingParam,wEdge=0):
 
+    # initalize variables
     numImages = len(viewList)
     # print("viewList:", viewList)
     # print("numImages", numImages)
@@ -28,14 +43,13 @@ def runGraphMatchBatch(datapath,viewList,pairingMode,wEdge=0):
 
     pairingMode = pairingMode.lower()
 
-    if pairingMode == "all":
+    # calculate pairing matrix
+    if pairingMode == "all": # matrix should be all ones
         print("All Pairing Mode")
         pairs = np.ones((numImages, numImages)).astype(int)
-        # TODO: do i need to remove self matches, along diagonal?
 
     elif pairingMode == "loop":
         print("Loop Pairing Mode")
-        # make pairingParam neighbors
         for i in range(pairs.shape[0]):
             for n in range(pairingParam):
                 dist = n + 1
@@ -65,46 +79,48 @@ def runGraphMatchBatch(datapath,viewList,pairingMode,wEdge=0):
 
     print(pairs)
 
-    # load hypercols file
-    # views = [] # array of hypercols files
-    # for f in files:
-    #     if f.endswith(".hypercols_kpts.mat"):
-    #         views.append(datasetFilePath + datapath + "/" + f)
-
+    # Create pairMatches array
     pairMatches = np.empty((numImages, numImages), dtype=pairwiseMatches)
     # print(pairMatches.shape)
     # print(viewList)
-    #graph mathcing with hypercols file
+
+    # Do graph mathcing with hypercols file
     for i in tqdm.trange(numImages):
         for j in tqdm.trange(i + 1, numImages):
             if pairs[i][j] == 1:
                 # print("running graph matching")
-                viewPair = (viewList[i], viewList[j])
+                viewPair = (viewList[i], viewList[j]) # pair of images
                 # print(i , j)
-                matchData = graphMatch(viewPair, wEdge)
+                matchData = graphMatch(viewPair, wEdge) # run graph matching on two images
                 # print(matchData)
                 matchData.filename = (viewList[i], viewList[j])
-                # fix print statement
-                # print(f'Done! (%d,%d) feautres, %d initial matches, %d output matches\n',matchData.nFeature,matchData.nFeature,len(matchData.X),sum(matchData.X))
-                # import pdb;  pdb.set_trace()
-                pairMatches[i][j] = matchData;
+                pairMatches[i][j] = matchData; # add to array
 
     return pairMatches
 
 
-# remember to add documentation again for params
+'''
+Run Graph Matching on two images
+Inputs:
+- viewPair: tuple of two hypercols filepaths
+- (optional)methodGM: Method for solving graph matching (sm, rw)
+- (optional)methodDisc: Method for discretization (greedy, hungry)
+- (optional)wEdge: Weigth of rigidicity
+- (optional)wAngle: no idea tbh
+- (optional)kNNInit: number of candidate correpondences for each feature
+- (optional)nMaxInit: total number of candidate correpondences after optimization
+- (optional)thScore: threshold of matching scores below which the match is ignored
+- (optional)thRatio: no idea, threshold ratio ?
+- (optional)thDist: no idea, threshold distance ?
+
+Output:
+- mData: a pairwiseMatches class
+'''
 def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAngle = 0.3, kNNInit = 50, nMaxInit = 5000, thScore = 0, thRatio = 1, thDist = 0):
+
     # obtain intiial matches
     # print("Looking for initial matches...")
     simScores, matchInds = initMatch(viewPair,kNNInit,nMaxInit,thScore,thRatio)
-    # print("simScore---")
-    # print(simScores)
-    # print("Match Inds---")
-    # print(matchInds)
-
-    # viewMat2 = scipy.io.loadmat(viewPair[1])
-    # print(viewMat1['nfeature'])
-    # exit()
 
     # load preprocessed data into class
     matchInfo = matchInds
@@ -114,7 +130,8 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
     nFeature = viewMat1['nfeature'][0][0]
 
     if len(matchInfo) == 0: # if match list is empty, exit method
-        return mData
+        print("matchInfo list empty")
+        return pairwiseMatches([], 0, [], []) # should hopefully never come here
 
     # graph matching to introduce geometric constraint
     Xraw = []
@@ -127,7 +144,7 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
 
         # do some spooky math
-        print(matchInfo.shape) # 100, 2
+        print(matchInfo.shape) # (100, 2)
         unique_features1, new_feat1 = np.unique(matchInfo[:,0], return_inverse=True)
         print(unique_features1)
         print(new_feat1)
@@ -147,20 +164,23 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
         else:
             print("Unkown graph matching method:", methodGM)
             exit()
+
     # discretization
     # print("discretization...")
-    if methodDisc == "greedy":
+    if methodDisc == "greedy": # do greedyMatch
         # print(mData.matchInfo)
         X = greedyMatch(matchInfo, Xraw)
         # print(mData.matchInfo)
         # exit()
-    elif methodDisc == "hungary": #spelling ?
+    elif methodDisc == "hungry":
         # X = optimalMatch(mData.matchInfo, Xraw)
-        print("Implementation not finished: hungary")
+        print("Implementation not finished: hungry")
+        exit()
     else:
         print("Unknown discretization method:", methodDisc)
         exit()
 
+    # load calculate X and Xraw into class
     mData.Xraw = np.array(Xraw).astype(np.float32)
     mData.X = X
 
@@ -168,7 +188,18 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
     return mData
 
-
+'''
+Peform inital matching
+Inputs:
+- viewPair: tuple of two hypercols filpaths
+- kNNInit: k value for k nearest neighbors
+- nMaxInit:
+- threshScore:
+- threshRatio:
+Outputs:
+- simScores: Numpy array of similarity scores
+- matchInds: Numpy array match indices
+'''
 def initMatch(viewPair,kNNInit,nMaxInit,threshScore,threshRatio):
 
     # loading in view hypercols
@@ -190,11 +221,11 @@ def initMatch(viewPair,kNNInit,nMaxInit,threshScore,threshRatio):
     # recompute threshold distance (scale to image size?)
     # threshDist = np.max(viewMat2['img'].shape)*threshDist
 
+    # calculate similarity scores and match indices
     for i in range(desc1.shape[1]):
         dotprods = desc1[:, i]@desc2
         # print(dotprods)
         # print(desc1[:, i])
-        # exit()
         sortedInds = np.argsort(-dotprods) # grab indicies of sorted array
         frame2 = featLocs2[:,sortedInds] # same order as sortedinds
         dotprods = dotprods[sortedInds] # sort by descending order
@@ -223,7 +254,15 @@ def initMatch(viewPair,kNNInit,nMaxInit,threshScore,threshRatio):
 
     return (simScores, matchInds)
 
-# greedy selection
+'''
+Perform Greedy Matching
+Inputs:
+- match: numpy array of matches
+- score: Xraw, similarity scores
+-(optional)nMax: kinda wack, convergence condition?
+Outputs:
+-
+'''
 def greedyMatch(match, score, nMax=np.inf):
     flag = np.zeros((len(score), 1))
     # print(flag.shape)
@@ -258,7 +297,7 @@ def greedyMatch(match, score, nMax=np.inf):
 
     return flag
 
-def main():
+def main(): # test runGraphMatchBatch
     datapath = "Car"
     viewList = np.zeros((10,10))
     pairingMode = "neighbor"

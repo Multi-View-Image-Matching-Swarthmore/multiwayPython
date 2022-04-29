@@ -17,21 +17,21 @@ RESIZEFACTOR = 1.0
 datasetFilePath = os.getcwd() + "/dataset/WILLOW-ObjectClass/"
 print(datasetFilePath)
 
-for c in classes:
-    files = os.listdir(datasetFilePath + c + "/")
-    for f in files:
-        if f.endswith(".mat"):
-            npFilename = f.replace(".mat", ".npy")
-            npFilepath = os.getcwd() + "/dataset/numpyFiles/" + c + "/"
-            print(datasetFilePath + c + "/" + f)
-            mat = scipy.io.loadmat(datasetFilePath + c + "/" + f)
-            sys.exit()
-            # print(mat)
-            arr = mat['pts_coord']
-            nparr = np.array(arr)
-            # print(nparr.shape)
-            np.save(npFilepath + npFilename, nparr)
-            print("processed", f)
+# for c in classes:
+#     files = os.listdir(datasetFilePath + c + "/")
+#     for f in files:
+#         if f.endswith(".mat"):
+#             npFilename = f.replace(".mat", ".npy")
+#             npFilepath = os.getcwd() + "/dataset/numpyFiles/" + c + "/"
+#             print(datasetFilePath + c + "/" + f)
+#             mat = scipy.io.loadmat(datasetFilePath + c + "/" + f)
+#             sys.exit()
+#             # print(mat)
+#             arr = mat['pts_coord']
+#             nparr = np.array(arr)
+#             # print(nparr.shape)
+#             np.save(npFilepath + npFilename, nparr)
+#             print("processed", f)
 
 ######
 for pname in PATH_LIST:

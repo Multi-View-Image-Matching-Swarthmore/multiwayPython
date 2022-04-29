@@ -2,7 +2,9 @@ import scipy.io
 import numpy as np
 
 from multiObjectMatchingUtil import spectralMatch
-
+'''
+SPECTRAL MATCHING IS BAD!!! don't run this unless you want to waste more time making it work -ere
+'''
 mat = scipy.io.loadmat("test_spectral.mat")
 # print(mat['vM'])
 

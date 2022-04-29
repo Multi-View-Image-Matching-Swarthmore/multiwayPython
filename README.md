@@ -1,6 +1,7 @@
 # Multi-Object Matching (for Python)
 Erebus Oh, Professor Stephen Phillips
-<eoh2@swarthmore.edu>
+
+Contact <eoh2@swarthmore.edu> for questions.
 
 This repository is a Python implementation of [Multi-Object Matching](https://github.com/zju-3dv/multiway). To view their README, see Multi-ObjectMatchingREADME.md.
 

@@ -14,6 +14,14 @@ conda env create --file environment.yml
 conda activate multiway
 ```
 
+## Pip Virtualenv Environment
+Or set up with pip virtual env:
+```
+virtualenv env
+source env/bin/activate
+pip3 install -r requirements.txt
+```
+
 ## Dataset
 We use the WILLOW-ObjectClass Dataset and Alexnet. Follow the steps below:
 

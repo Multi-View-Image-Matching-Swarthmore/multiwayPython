@@ -3,3 +3,4 @@ _pycache__/
 dataset/WILLOW-ObjectClass/
 dataset/numpyFiles/
 bvlc_alexnet.npy
+env/

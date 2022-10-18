@@ -1,8 +1,8 @@
 import sys, os
 import numpy as np
 import scipy.io
-from dataset.prepareDataset import extractFiles
-from dataset.getDataset import getDataset
+#from dataset.prepareDataset import extractFiles
+#from dataset.getDataset import getDataset
 from pairwiseMatchingUtil import runGraphMatchBatch
 from multiObjectMatchingUtil import runJointMatch
 from evaluationUtil import pMatch2perm, evalMMatch

@@ -7,12 +7,13 @@ from myalexnet_forward import network
 from myalexnet_forward import run
 from hypercol import compute_hypercols
 import os, sys
+from tqdm import tqdm
 
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
 
 RESIZEFACTOR = 1.0
-# PATH_LIST = glob.glob('./dataset/WILLOW-ObjectClass/*')
-# print(PATH_LIST)
+PATH_LIST = glob.glob('./dataset/WILLOW-ObjectClass/*')
+print(PATH_LIST)
 
 datasetFilePath = os.getcwd() + "/dataset/WILLOW-ObjectClass/"
 print(datasetFilePath)
@@ -34,7 +35,8 @@ print(datasetFilePath)
 #             print("processed", f)
 
 ######
-for pname in PATH_LIST:
+for i in tqdm(range(len(PATH_LIST))):
+    pname = PATH_LIST[i]
     fnames = glob.glob(pname+'/*.png')
     # load and resize images (will also save them afterwards)
     ims = [imresize(imread(f)[:,:,:3], RESIZEFACTOR).astype('float32') for f in fnames]

@@ -113,9 +113,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     Z = []
     print("Running joint match, problem size = (" + str(vM.shape[0]) + "," + str(Size) + ")")
-    # exit()
 
-    method = "spectral" # debugging line, shoudl eventually remove -ere
+    method = "als" # debugging line, shoudl eventually remove -ere
 
     if method == "spectral":
         print("Spectral Matching...")
@@ -124,7 +123,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         print("matchlift (MatchLift) not implemented! Sorry!")
         exit()
     elif method == "als": ## TODO:
-        print("als (MatchALS) not implemented! Sorry!")
+        print("MatchALS...")
+        M_out, eigV, tInfo = matchALS(vM, nFeature, Size)
         exit()
     elif method == "pg":
         print("pg (proposed method) not implemented! Sorry!")
@@ -198,6 +198,52 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     # exit()
 
     return jMatch,jmInfo,tInfo
+
+'''
+Run MatchALS Matching
+Inputs
+- W: numpy matrix of binary scores
+- nFeature: numpy array of how many features in each image
+- universeSize: same as before (should be 10)
+Outputs
+- X: sparse binary matrix indicating correspondences
+- A: AA^T = X
+- runtime: runtime
+'''
+def matchALS(W, nFeature, univsizeSize):
+    print("In Match ALS method")
+
+    alpha = 50
+    beta = 0.1
+    maxRank = max(nFeature)*4
+    pSelect = 1
+    tol = 5e-4
+    maxIter = 1000
+    verbose = True
+    eigenvalues = False
+
+    print("Running MatchALS: alpha=%d, beta=%d, maxRank=%d, pSelect=%d" % (alpha, beta, maxRank, pSelect))
+
+    # print(type(W))
+    wHeight, wWidth = W.shape
+
+    # w is (400,400)
+    # make diagonals zero
+    for i in range(min(wHeight, wWidth)):
+        W[i,i] = 0.0
+
+    W = (W+W.T)/2
+    # X = single(full(W))
+    # Z = single(full(W))
+    # Y = single(zeros(size(X)))
+
+    X = W.toarray(order='C').astype(np.float32)
+    Z = W.toarray(order='C').astype(np.float32)
+    Y = np.zeros((wHeight, wWidth)).astype(np.float32)
+    mu = 64
+
+    exit()
+
 
 
 '''

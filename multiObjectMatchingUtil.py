@@ -3,7 +3,9 @@ from scipy.sparse.linalg import eigs
 from scipy.sparse import csr_matrix
 import time
 import sys
+import math
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 import scipy.io
 
@@ -124,7 +126,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         exit()
     elif method == "als": ## TODO:
         print("MatchALS...")
-        M_out, eigV, tInfo = matchALS(vM, nFeature, Size)
+        M_out, eigV, tInfo, iter = matchALS(vM, nFeature, Size)
         exit()
     elif method == "pg":
         print("pg (proposed method) not implemented! Sorry!")
@@ -199,6 +201,9 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     return jMatch,jmInfo,tInfo
 
+def debugNorm(A):
+    return np.linalg.norm(A, ord=2)
+
 '''
 Run MatchALS Matching
 Inputs
@@ -210,16 +215,17 @@ Outputs
 - A: AA^T = X
 - runtime: runtime
 '''
-def matchALS(W, nFeature, univsizeSize):
+def matchALS(W, nFeature, universeSize):
     print("In Match ALS method")
 
-    alpha = 50
+    alpha = 20 # was 50
     beta = 0.1
-    maxRank = max(nFeature)*4
+    # maxRank = max(nFeature)*4
+    maxRank = universeSize
     pSelect = 1
     tol = 5e-4
     maxIter = 1000
-    verbose = True
+    verbose = False
     eigenvalues = False
 
     print("Running MatchALS: alpha=%d, beta=%d, maxRank=%d, pSelect=%d" % (alpha, beta, maxRank, pSelect))
@@ -233,16 +239,129 @@ def matchALS(W, nFeature, univsizeSize):
         W[i,i] = 0.0
 
     W = (W+W.T)/2
-    # X = single(full(W))
-    # Z = single(full(W))
-    # Y = single(zeros(size(X)))
 
     X = W.toarray(order='C').astype(np.float32)
     Z = W.toarray(order='C').astype(np.float32)
     Y = np.zeros((wHeight, wWidth)).astype(np.float32)
     mu = 64
 
-    exit()
+    n = X.shape[0]
+    maxRank = min(n, math.ceil(maxRank))
+    # A2 = np.random.random((n, maxRank))
+    mat = scipy.io.loadmat("A_matrix.mat")
+    A = np.array(mat['A'])
+
+    print(A.shape)
+    # print(A2.shape)
+    # exit()
+
+    nFeature = np.cumsum(nFeature)
+    nFeature = np.insert(nFeature, 0, 0)
+
+    print(nFeature)
+    print(nFeature.shape)
+
+    # exit()
+
+    start = time.time()
+
+    for i in tqdm(range(maxIter)):
+
+        print("1.", A[:5,:5])
+
+        X0 = X.copy()
+        X = Z - (Y.astype(np.float64) - W + beta)/mu # mayber problem here?
+
+        b0 = A.T@A + (alpha/mu) * np.eye(maxRank)
+        print("2.", b0[:5, :5])
+        b1 = A.T@X # something goes wrong here
+        print("3.", b1[:5, :5])
+        B = np.linalg.solve(b0, b1).T
+        print("4.", B[:5, :5])
+
+        exit()
+
+        a0 = B.T@B + (alpha/mu) * np.eye(maxRank)
+        print("2.", A[:5,:5])
+        a1 = B.T@X
+        print("3.", A[:5,:5])
+        A = np.linalg.solve(a0, a1).T
+        print("4.", A[:5,:5])
+
+        X = A*B.T
+
+        print("i: {}, X norm: {:0.5e}, A norm: {:0.5e}, B norm: {:0.5e}".format(i, debugNorm(X), debugNorm(A), debugNorm(B)))
+        print("5.", A[:5,:5])
+        exit()
+
+        Z = X + Y/mu
+        diagZ = np.diagonal(Z)
+
+        # print(diagZ)
+
+        # enforce the self-matching to be null
+        for j in range(nFeature.shape[0] - 1):
+            ind1 = np.arange(nFeature[j], nFeature[j+1]).astype(int)
+            ind1_length = ind1.shape[0]
+            Z[ind1][:, ind1] = 0.0
+            # print(Z[ind1][:,ind1].shape)
+            # exit()
+        # Optimize for diaginal elements
+        if pSelect == 1:
+            for zi in range(Z.shape[0]):
+                Z[zi, zi] = 1.0
+        else:
+            # matlab code:
+            # diagZ = proj2kav(diagZ,pSelect*length(diagZ));
+            # Z(1:size(Z,1)+1:end) = diagZ;
+            print("not implemented proj2kav! Exiting...")
+            exit()
+
+        # rounding all elements to [0,1]
+        Z = np.clip(Z, 0.0, 1.0)
+
+        Y = Y + mu*(X - Z)
+
+        # import pdb; pdb.set_trace()
+
+        pRes = np.linalg.norm(X.flatten() - Z.flatten())/n
+        dRes = mu*np.linalg.norm(X.flatten() - X0.flatten())/n
+
+
+        if verbose:
+            print("Iter = %d, Res = (%e, %e), mu = %f" % (i, pRes, dRes, mu))
+
+        if pRes < tol and dRes < tol:
+            break
+
+        if pRes > 10*dRes:
+            mu = 2*mu
+        elif dRes > 10*pRes:
+            mu = mu/2
+
+        if i >= 3:
+            exit()
+
+    X = (X+X.T)/2
+
+    end = time.time()
+
+    runtime = end - start
+    iterations = i
+
+    print(iterations)
+
+    if iterations >= maxIter - 1:
+        print("Algorithm terminated at max iterations. Time = %e, Iter = %d, Res = (%e,%e), mu = %self.fail('message')" % (runtime, iterations, pRes, dRes, mu))
+        exit()
+
+    eigenvalues = np.linalg.eig(X)
+    ind = np.nonzero(X>0.5)
+    X_bin = csr_matrix((X[ind], ind), X.shape)
+
+    print("Algorithm terminated. Time = %e, Iter = %d, Res = (%e,%e), mu = %f" % (runtime, iterations, pRes, dRes, mu))
+
+    return X_bin, eigenvalues, runtime, iterations
 
 
 

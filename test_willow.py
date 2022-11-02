@@ -96,7 +96,7 @@ def main():
     #   'matchlift': MatchLift, [Near-optimal joint object matching via convex relaxation, ICML 2014]
     #   'als': MatchALS, [Multi-Image Matching via Fast Alternating Minimization, CVPR 2015]
     print("Multi Object Matching")
-    jMatch,jmInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
+    jMatch,jmInfo = runJointMatch(pMatch,C,method='als',univsize=10,rank=3,l=1)
 
     print("Exiting after Multi Object Matching in test_willow")
     exit()

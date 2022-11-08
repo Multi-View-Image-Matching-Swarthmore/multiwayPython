@@ -219,7 +219,7 @@ def matchALS(W, nFeature, universeSize):
     print("In Match ALS method")
 
     alpha = 20 # was 50
-    beta = 0.1
+    beta = 0 # 0.1 <-- SP did this
     # maxRank = max(nFeature)*4
     maxRank = universeSize
     pSelect = 1
@@ -238,11 +238,11 @@ def matchALS(W, nFeature, universeSize):
     for i in range(min(wHeight, wWidth)):
         W[i,i] = 0.0
 
-    W = (W+W.T)/2
+    W = (W+W.T)/2.0
 
-    X = W.toarray(order='C').astype(np.float32)
-    Z = W.toarray(order='C').astype(np.float32)
-    Y = np.zeros((wHeight, wWidth)).astype(np.float32)
+    X = W.toarray(order='C') #.astype(np.float32)
+    Z = W.toarray(order='C') #.astype(np.float32)
+    Y = np.zeros((wHeight, wWidth)) #.astype(np.float32)
     mu = 64
 
     n = X.shape[0]
@@ -276,6 +276,7 @@ def matchALS(W, nFeature, universeSize):
         print("2.", b0[:5, :5])
         b1 = A.T@X # something goes wrong here
         print("3.", b1[:5, :5])
+        import pdb; pdb.set_trace()
         B = np.linalg.solve(b0, b1).T
         print("4.", B[:5, :5])
 

@@ -265,48 +265,73 @@ def matchALS(W, nFeature, universeSize):
 
     start = time.time()
 
-    for i in tqdm(range(maxIter)):
+    # for i in tqdm(range(maxIter)):
+    for i in range(maxIter):
+    # for i in range(3):
 
-        print("1.", A[:5,:5])
+        # print("1.", A[:5,:5])
+        # print("1. Start For Loop")
 
         X0 = X.copy()
-        X = Z - (Y.astype(np.float64) - W + beta)/mu # mayber problem here?
+        X = Z - (Y.astype(np.float64) - W + beta)/mu # diverges here
+        # print("2.1: Z norm:", debugNorm(Z))
+        # print("2.2: Y norm:", debugNorm(Y))
+        # print("2.3: W shape:", debugNorm(W.todense()))
+        # print("2.4: beta:", beta)
+        # print("2.5: mu:", mu)
+        # print("2. X norm:",debugNorm(X))
 
         b0 = A.T@A + (alpha/mu) * np.eye(maxRank)
-        print("2.", b0[:5, :5])
+        # print("3. b0 norm:",debugNorm(b0))
+        # print("2.", b0[:5, :5])
         b1 = A.T@X # something goes wrong here
-        print("3.", b1[:5, :5])
-        import pdb; pdb.set_trace()
+        # print("4. b1 norm:",debugNorm(b1))
+        # print("3.", b1[:5, :5])
+        # import pdb; pdb.set_trace()
         B = np.linalg.solve(b0, b1).T
-        print("4.", B[:5, :5])
+        # print("5. B norm:",debugNorm(B))
+        # print("4.", B[:5, :5])
 
-        exit()
+        # exit()
 
         a0 = B.T@B + (alpha/mu) * np.eye(maxRank)
-        print("2.", A[:5,:5])
-        a1 = B.T@X
-        print("3.", A[:5,:5])
+        # print("6. a0 norm:", debugNorm(a0))
+        # print("2.", A[:5,:5])
+        a1 = B.T@X.T
+        # print("7. a1 norm:", debugNorm(a1))
+        # print("3.", A[:5,:5])
         A = np.linalg.solve(a0, a1).T
-        print("4.", A[:5,:5])
+        # print("8. A norm:", debugNorm(A))
+        # print("4.", A[:5,:5])
 
-        X = A*B.T
+        X = A@B.T
+
+        # print("9. X norm:", debugNorm(X))
 
         print("i: {}, X norm: {:0.5e}, A norm: {:0.5e}, B norm: {:0.5e}".format(i, debugNorm(X), debugNorm(A), debugNorm(B)))
-        print("5.", A[:5,:5])
-        exit()
+        # print("5.", A[:5,:5])
+        # exit()
+
+        # start debugging here
 
         Z = X + Y/mu
+        # print("10. Z norm", debugNorm(Z))
         diagZ = np.diagonal(Z)
+        # print("11. diagZ norm", debugNorm(diagZ))
 
         # print(diagZ)
 
         # enforce the self-matching to be null
+        # import pdb; pdb.set_trace()
         for j in range(nFeature.shape[0] - 1):
+            start, stop = int(nFeature[j]), int(nFeature[j+1])
             ind1 = np.arange(nFeature[j], nFeature[j+1]).astype(int)
             ind1_length = ind1.shape[0]
-            Z[ind1][:, ind1] = 0.0
+            Z[start:stop, start:stop] = 0.0
             # print(Z[ind1][:,ind1].shape)
             # exit()
+
+        # print("11.5. Z norm:", debugNorm(Z))
         # Optimize for diaginal elements
         if pSelect == 1:
             for zi in range(Z.shape[0]):
@@ -319,9 +344,13 @@ def matchALS(W, nFeature, universeSize):
             exit()
 
         # rounding all elements to [0,1]
+        # print("11.75. Z norm:", debugNorm(Z))
+
         Z = np.clip(Z, 0.0, 1.0)
+        # print("12. Z norm", debugNorm(Z))
 
         Y = Y + mu*(X - Z)
+        # print("13. Y norm:", debugNorm(Y))
 
         # import pdb; pdb.set_trace()
 
@@ -340,9 +369,6 @@ def matchALS(W, nFeature, universeSize):
         elif dRes > 10*pRes:
             mu = mu/2
 
-        if i >= 3:
-            exit()
-
     X = (X+X.T)/2
 
     end = time.time()
@@ -358,7 +384,8 @@ def matchALS(W, nFeature, universeSize):
 
     eigenvalues = np.linalg.eig(X)
     ind = np.nonzero(X>0.5)
-    X_bin = csr_matrix((X[ind], ind), X.shape)
+    temp = np.array(X[ind]).flatten()
+    X_bin = csr_matrix((temp, ind), X.shape)
 
     print("Algorithm terminated. Time = %e, Iter = %d, Res = (%e,%e), mu = %f" % (runtime, iterations, pRes, dRes, mu))
 

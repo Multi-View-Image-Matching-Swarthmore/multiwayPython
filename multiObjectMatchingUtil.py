@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.sparse.linalg import eigs
 from scipy.sparse import csr_matrix
+from scipy.spatial.distance import cdist
 import time
 import sys
 import math
@@ -116,7 +117,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     Z = []
     print("Running joint match, problem size = (" + str(vM.shape[0]) + "," + str(Size) + ")")
 
-    method = "als" # debugging line, shoudl eventually remove -ere
+    method = "pg" # debugging line, shoudl eventually remove -ere
 
     if method == "spectral":
         print("Spectral Matching...")
@@ -124,12 +125,13 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     elif method == "matchlift":
         print("matchlift (MatchLift) not implemented! Sorry!")
         exit()
-    elif method == "als": ## TODO:
+    elif method == "als":
         print("MatchALS...")
         M_out, eigV, tInfo, iter = matchALS(vM, nFeature, Size)
         exit()
-    elif method == "pg":
-        print("pg (proposed method) not implemented! Sorry!")
+    elif method == "pg": #todo
+        M_out, eigV, tInfo, Z = proposedMethod(vM, C, nFeature, Size)
+        # print("pg (proposed method) not implemented! Sorry!")
         exit()
     else:
         print("Unkown Multi-Object Matching method:", method)
@@ -201,6 +203,208 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     return jMatch,jmInfo,tInfo
 
+'''
+Functions for Proposed Method Matching
+- get_newX
+- initial_Y
+- proj2dpam
+'''
+
+'''
+get_newX function
+Inputs:
+- Y: 
+- X: 
+- C: 
+- rho: 
+- K: 
+- rank: 
+- nFeature: 
+- var_lambda: 
+Outputs:
+- X:
+'''
+def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
+    print("getting new X...")
+    # geometric constraint
+    n = len(nFeature) - 1
+    M = np.zeros(n, n) # what do i init M as ??
+    for i in range(n):
+        start, stop = int(nFeature[i]), int(nFeature[i+1])
+        ind1 = np.arange(nFeature[i], nFeature[i+1]).astype(int)
+        M[2*i - 1:2*i,:] = C[:,ind1]*X[ind1,:] # check this
+    # update Z
+    U, S, V = np.linalg.svd(M) # econ setting ??
+    # https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html
+    # https://www.mathworks.com/help/matlab/ref/double.svd.html#d124e1487529
+    Z = U*S[:,:rank]*V[:,:rank]
+
+    # update X
+    for i in range(n):
+        start, stop = int(nFeature[i]), int(nFeature[i+1])
+        ind1 = np.arange(nFeature[i], nFeature[i+1]).astype(int)
+        ind1_length = ind1.shape[0]
+        Ci = C[:,ind1]
+        Zi = Z[2*i-1:2*i, :]
+        Yi = Y[ind1,:]
+        # hungarian <- wtf is this -ere
+        # pdist2 Matlab -> cdist Scipy?
+        # https://stackoverflow.com/questions/43650931/python-alternative-for-calculating-pairwise-distance-between-two-sets-of-2d-poin
+        D = var_lambda*cdist(Ci.T,Zi.T)
+        distMatrix = D - rho*Yi - min(min(D - rho*Yi))
+        assignment = assignmentoptimal(double(distMatrix)) # todo implement assignmentoptimal
+        Xhi = np.zeros(ind1_length, K)
+        q = np.find(assignment >= 1) # check?
+        indices = q*len(Xhi[0]) + assignment[q] # check equiv to sub2ind Matlab
+        # https://stackoverflow.com/questions/28995146/matlab-ind2sub-equivalent-in-python
+        Xhi[indices] = 1
+        X[ind1,:] = Xhi
+
+        return X
+'''
+initial_Y function
+Inputs:
+
+Outputs: 
+- Y
+'''
+def initial_Y(Y0, W, nFeature):
+    print("initialize Y...")
+    tol = 1e-4
+    maxIter = 500
+    lambdas = [1e0 1e1 1e2 1e3 1e4]
+    Y = Y0
+    m = len(W[0])
+    start = time.time()
+    for i in range(len(lambdas)):
+        for iter in range(maxIter):
+            Y0 = Y
+            # compute gradient and stepsize
+            normr = 0
+            for j in range(len(nFeature[0]) - 1):
+                start, stop = int(nFeature[j]), int(nFeature[j+1])
+                ind1 = np.arange(nFeature[j], nFeature[j+1]).astype(int)
+                ind1_length = ind1.shape[0]
+                Yi = Y[ind1,:]
+                YitYi = Yi.T*Yi
+                Y_YitYi[ind1,:] = Yi*YitYi # oh boy this is probably wrong
+                # step size of regularizer
+                Hr = lambdas[i]*(3*np.linalg.norm(Y[ind1,:].T*Y[ind1,:]) + 1)
+                normr = max(Hr, normr) # check ? what is normr?
+
+                # update and project
+                Y = Y - g/st # oh shoot we need more variables in method ack
+                for k in range(len(nFeature[0]) - 1):
+                    start2, stop2 = int(nFeature[k]), int(nFeature[k+1])
+                    ind2 = np.arange(nFeature[k], nFeature[k+1]).astype(int)
+                    ind2_length = ind2.shape[0]
+                    Y[ind2,:] = proj2pam(Y[ind2,:], 1e-2) # todo implement
+                
+                RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
+                print("lambda = %d,  iter = %d, Res = %d" % lambdas[i], iter, RelChg)
+
+                if RelChg < tol:
+                    break
+    return Y
+'''
+proj2dpam function
+Inputs:
+- Y:
+- tol: 
+Outputs:
+- X: 
+'''
+def proj2dpam(Y,tol): # todo
+    return None
+
+'''
+Run the Proposed Method Matching
+Inputs:
+- W: numpy matrix of binary scores, m*m
+- C: numpy coordinate matric, 2*m
+- nFeature: numpy array of how many features in each image
+- k: number of selected features
+Outputs:
+- XP: joint matching result, m*m
+- X: mapping from image features to selected feature space, m*k
+- M: coordinates of selected features
+'''
+def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
+    print("In Proposed Method function.")
+
+    tol_Y = 1e-4
+    var_lambda = 1 # weight of geometric constant, redundant, made as param ????
+    maxIter = 500
+    maxIter_Y = 500
+    verbose = True
+
+    print("Running Proposed Method: lambda=%d, rank=%d, tol_Y=%d, maxIter=%d, maxIter_Y=%d" % (var_lambda, rank, tol_Y, maxIter, maxIter_Y))
+
+    m = len(vM[0])
+    
+    nFeature = np.cumsum(nFeature)
+    nFeature = np.insert(nFeature, 0, 0)
+
+    Y = np.random.rand(m, k) # initialize Y randomly ??
+
+    start = time.time()
+
+    #todo implement initial_Y method
+    Y = initial_Y(Y, W, nFeature) # initialie Y by projected gradient descent
+
+    # initialize X
+    U = np.zeros(m,k)
+    C_norm = 0 # todo implement
+    X = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # todo implement
+
+    # update Y X Z
+    Rho = [1e0 1e1 1e2]
+    Iter = 0
+    for i in range(len(Rho)):
+        rho = Rho[i]
+        for iter in range(maxIter):
+            # update Y
+            for iter_Y in range(maxIter_Y):
+                t1_start = time.time()
+                Y0 = Y
+                g = - W*Y + Y*(Y.T * Y) + rho*(Y - X)
+                st = 3*np.linalg.norm(Y.T*Y) + np.linalg.norm(W) + rho
+                Y = Y - g/st
+                for i2 in range(nFeature.shape[0] - 1):
+                    start, stop = int(nFeature[i2]), int(nFeature[i2+1])
+                    ind1 = np.arange(nFeature[i2], nFeature[i2+1]).astype(int)
+                    ind1_length = ind1.shape[0]
+                    Y[start:stop, start:stop] = proj2dpam(Y[ind1,:], 1e-2) # todo implement proj2dpam
+                t1_stop = time.time()
+                t1 = t1_stop - t1_start
+                RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
+
+                if verbose:
+                    print("Iter = %d, iter_Y  = %d, Res = %e, t = %f\n" % iter, iter_Y, RelChg, t1)
+
+                if RelChg < tol_Y:
+                    break
+            # update X
+            X0 = X
+            X, M = get_newX(Y, X, C_norm, rho, k, rank, nFeature, var_lambda) # todo implement get_newX
+           
+            if np.sum(abs(X - X0)) < 1: # check?
+                break
+
+        Iter = Iter + iter # wtf come back to this
+
+    # overall match
+    stop = time.time()
+    runtime = stop - start
+    iterations = Iter
+    XP = X*X.T
+
+    print("Time = %fs, Overall Iter = %d" % runtime, iterations)
+
+    # M_out, eigV, tInfo, Z
+    return XP, X, runtime, M
+
+# debugging function
 def debugNorm(A):
     return np.linalg.norm(A, ord=2)
 

@@ -13,7 +13,7 @@ from pairwiseMatchingUtil import greedyMatch
 from classes import pairwiseMatches, jointMatchInfo
 
 '''
-Run Join matching
+Run Joint matching
 Inputs:
 - pMatch: pairwise matching results, numpy array of pairwiseMatches class
 - C: 2*m coordinate matrix, m is the totel number of keypoitns in the image collection
@@ -252,8 +252,6 @@ def matchALS(W, nFeature, universeSize):
     A = np.array(mat['A'])
 
     print(A.shape)
-    # print(A2.shape)
-    # exit()
 
     nFeature = np.cumsum(nFeature)
     nFeature = np.insert(nFeature, 0, 0)
@@ -261,77 +259,36 @@ def matchALS(W, nFeature, universeSize):
     print(nFeature)
     print(nFeature.shape)
 
-    # exit()
-
     start = time.time()
 
     # for i in tqdm(range(maxIter)):
     for i in range(maxIter):
-    # for i in range(3):
-
-        # print("1.", A[:5,:5])
-        # print("1. Start For Loop")
 
         X0 = X.copy()
-        X = Z - (Y.astype(np.float64) - W + beta)/mu # diverges here
-        # print("2.1: Z norm:", debugNorm(Z))
-        # print("2.2: Y norm:", debugNorm(Y))
-        # print("2.3: W shape:", debugNorm(W.todense()))
-        # print("2.4: beta:", beta)
-        # print("2.5: mu:", mu)
-        # print("2. X norm:",debugNorm(X))
+        X = Z - (Y.astype(np.float64) - W + beta)/mu
 
         b0 = A.T@A + (alpha/mu) * np.eye(maxRank)
-        # print("3. b0 norm:",debugNorm(b0))
-        # print("2.", b0[:5, :5])
-        b1 = A.T@X # something goes wrong here
-        # print("4. b1 norm:",debugNorm(b1))
-        # print("3.", b1[:5, :5])
-        # import pdb; pdb.set_trace()
+        b1 = A.T@X 
         B = np.linalg.solve(b0, b1).T
-        # print("5. B norm:",debugNorm(B))
-        # print("4.", B[:5, :5])
-
-        # exit()
 
         a0 = B.T@B + (alpha/mu) * np.eye(maxRank)
-        # print("6. a0 norm:", debugNorm(a0))
-        # print("2.", A[:5,:5])
         a1 = B.T@X.T
-        # print("7. a1 norm:", debugNorm(a1))
-        # print("3.", A[:5,:5])
         A = np.linalg.solve(a0, a1).T
-        # print("8. A norm:", debugNorm(A))
-        # print("4.", A[:5,:5])
 
         X = A@B.T
 
-        # print("9. X norm:", debugNorm(X))
+        # print("i: {}, X norm: {:0.5e}, A norm: {:0.5e}, B norm: {:0.5e}".format(i, debugNorm(X), debugNorm(A), debugNorm(B)))
 
-        print("i: {}, X norm: {:0.5e}, A norm: {:0.5e}, B norm: {:0.5e}".format(i, debugNorm(X), debugNorm(A), debugNorm(B)))
-        # print("5.", A[:5,:5])
-        # exit()
-
-        # start debugging here
 
         Z = X + Y/mu
-        # print("10. Z norm", debugNorm(Z))
         diagZ = np.diagonal(Z)
-        # print("11. diagZ norm", debugNorm(diagZ))
-
-        # print(diagZ)
 
         # enforce the self-matching to be null
-        # import pdb; pdb.set_trace()
         for j in range(nFeature.shape[0] - 1):
             start, stop = int(nFeature[j]), int(nFeature[j+1])
             ind1 = np.arange(nFeature[j], nFeature[j+1]).astype(int)
             ind1_length = ind1.shape[0]
             Z[start:stop, start:stop] = 0.0
-            # print(Z[ind1][:,ind1].shape)
-            # exit()
-
-        # print("11.5. Z norm:", debugNorm(Z))
         # Optimize for diaginal elements
         if pSelect == 1:
             for zi in range(Z.shape[0]):
@@ -343,16 +300,9 @@ def matchALS(W, nFeature, universeSize):
             print("not implemented proj2kav! Exiting...")
             exit()
 
-        # rounding all elements to [0,1]
-        # print("11.75. Z norm:", debugNorm(Z))
-
         Z = np.clip(Z, 0.0, 1.0)
-        # print("12. Z norm", debugNorm(Z))
 
         Y = Y + mu*(X - Z)
-        # print("13. Y norm:", debugNorm(Y))
-
-        # import pdb; pdb.set_trace()
 
         pRes = np.linalg.norm(X.flatten() - Z.flatten())/n
         dRes = mu*np.linalg.norm(X.flatten() - X0.flatten())/n
@@ -442,14 +392,11 @@ def spectralMatch(W, nFeature, universeSize):
     # print(np.sum(M_out))
     print(compare)
     exit()
-    # print(Y)
-    # exit()
     X = np.matmul(Y,Y.T)
     end = time.time()
 
     runtime = end - start
     print(runtime)
-    # exit()
 
     return X, V, runtime
 
@@ -476,17 +423,12 @@ def rounding(A, dimGroup, threshold=0.5): # can we just run k means???
     # cumulative sum
     N = np.cumsum(dimGroup).astype(int)
     print("A:",A.shape)
-    # print("N:", N)
 
     flag = np.zeros((heightA,1)) # indicates in row already has been assigned a max
     Y = np.zeros((heightA, widthA)) # ends up 400 x 16?
     p = -1
     scores = np.zeros((10))
 
-    # print("Y shape:",Y.shape)
-    # print("dim group shape",dimGroup.shape)
-
-    # print("---")
     for i in range(heightA): # every row in A
         qwerty = "flag/arr" + str(i) + ".mat"
 
@@ -513,22 +455,10 @@ def rounding(A, dimGroup, threshold=0.5): # can we just run k means???
             Y[i][p] = 1
             flag[i] = 1
             # np.where N>= i, returns group greater than index
-            # ob = find(N>=i,1,'first');
             ob1 = np.where(N > i)[0][:-1] # indices of all the groups after i
-            # -1 needed ???
-            # exit()
             currentRow = A[i]
-            # print("\tcurrent row index:", i)
-            # print("current row:",currentRow)
-            # print("\t", ob1)
-            # print("\tnum groups", ob1.shape)
-            # exit()
             for groupIndex in range(len(ob1)): # for every group after i
                 groupStartIndex = N[groupIndex]
-                # print("\t\tgroup index",groupIndex)
-                # print("group start index", groupStartIndex)
-                # print("contents", A[N[groupStartIndex]])
-                # print(dimGroup[groupStartIndex])
                 groupSize = 10 # HARDCODED VARIBALE, all groups size 10
                 # exit()
                 scores = np.zeros((groupSize,))
@@ -546,17 +476,6 @@ def rounding(A, dimGroup, threshold=0.5): # can we just run k means???
                 if scores[j] > threshold:
                     Y[groupStartIndex + j][p] = 1
                     flag[groupStartIndex + j] = 1
-
-            # print(Y)
-            # file = open("file2.txt", "w+")
-            # np.set_printoptions(threshold=sys.maxsize)
-            # content = str(Y)
-            # np.set_printoptions(threshold=None)
-            # file.write(content)
-            # file.close()
-            # print("save Y array")
-            # exit()
-    # print(Y)
 
     ## TODO: check Y array with matlab
     exit()

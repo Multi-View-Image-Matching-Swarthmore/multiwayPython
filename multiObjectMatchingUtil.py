@@ -101,12 +101,15 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     # original scores
     lastIndex = int(cumulativeIndex[cumulativeIndex.shape[0] - 1])
 
-    M = csr_matrix((score, (ind1, ind2)), shape=(lastIndex, lastIndex))
+    M = csr_matrix((score, (ind1, ind2)), shape=(lastIndex, lastIndex)) #start her next time
+
+    # import pdb; pdb.set_trace();
 
     M = M + M.T
 
 
     # binary scores
+    # import pdb; pdb.set_trace();
     Mbin = csr_matrix((flag, (ind1, ind2)), shape=(lastIndex, lastIndex))
     Mbin = Mbin + Mbin.T
 
@@ -118,6 +121,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     print("Running joint match, problem size = (" + str(vM.shape[0]) + "," + str(Size) + ")")
 
     method = "pg" # debugging line, shoudl eventually remove -ere
+    # import pdb; pdb.set_trace();
 
     if method == "spectral":
         print("Spectral Matching...")
@@ -203,11 +207,24 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     return jMatch,jmInfo,tInfo
 
+
+'''
+
+'''
+def getInds(nFeature, j):
+    start, stop = int(nFeature[j]), int(nFeature[j+1])
+    return np.arange(nFeature[j], nFeature[j+1]).astype(int)
+    
+
 '''
 Functions for Proposed Method Matching
 - get_newX
 - initial_Y
 - proj2dpam
+    - projR
+    - projC
+    - proj2pav
+    - proj2pavC
 '''
 
 '''
@@ -228,32 +245,32 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
     print("getting new X...")
     # geometric constraint
     n = len(nFeature) - 1
-    M = np.zeros(n, n) # what do i init M as ??
+    M = np.zeros((2*n, X.shape[1]))
     for i in range(n):
-        start, stop = int(nFeature[i]), int(nFeature[i+1])
-        ind1 = np.arange(nFeature[i], nFeature[i+1]).astype(int)
-        M[2*i - 1:2*i,:] = C[:,ind1]*X[ind1,:] # check this
+        ind1 = getInds(nFeature, i)
+        import pdb; pdb.set_trace()
+        M[2*i:2*i+2,:] = C[:,ind1]@X[ind1,:] # not correct? X is not the same
     # update Z
-    U, S, V = np.linalg.svd(M) # econ setting ??
-    # https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html
-    # https://www.mathworks.com/help/matlab/ref/double.svd.html#d124e1487529
-    Z = U*S[:,:rank]*V[:,:rank]
+    U, S, V = np.linalg.svd(M, full_matrices=False) # econ setting (dont worry about it)
+    # DEBUGGING HERE
+    import pdb; pdb.set_trace()
+    S = np.diag(S)
+    Z = U[:,:S.shape[0]]@S[:,:rank]@V[:rank,:] 
 
     # update X
     for i in range(n):
-        start, stop = int(nFeature[i]), int(nFeature[i+1])
-        ind1 = np.arange(nFeature[i], nFeature[i+1]).astype(int)
-        ind1_length = ind1.shape[0]
+        ind1 = getInds(nFeature, i)
         Ci = C[:,ind1]
-        Zi = Z[2*i-1:2*i, :]
+        Zi = Z[2*i:2*i+2, :]
         Yi = Y[ind1,:]
         # hungarian <- wtf is this -ere
         # pdist2 Matlab -> cdist Scipy?
         # https://stackoverflow.com/questions/43650931/python-alternative-for-calculating-pairwise-distance-between-two-sets-of-2d-poin
-        D = var_lambda*cdist(Ci.T,Zi.T)
-        distMatrix = D - rho*Yi - min(min(D - rho*Yi))
+        D = var_lambda*cdist(Ci.T,Zi.T, "euclidean") # still issues
+        import pdb; pdb.set_trace()
+        distMatrix = D - rho*Yi - np.min(D - rho*Yi)
         assignment = assignmentoptimal(double(distMatrix)) # todo implement assignmentoptimal
-        Xhi = np.zeros(ind1_length, K)
+        Xhi = np.zeros((ind1_length, K))
         q = np.find(assignment >= 1) # check?
         indices = q*len(Xhi[0]) + assignment[q] # check equiv to sub2ind Matlab
         # https://stackoverflow.com/questions/28995146/matlab-ind2sub-equivalent-in-python
@@ -270,42 +287,145 @@ Outputs:
 '''
 def initial_Y(Y0, W, nFeature):
     print("initialize Y...")
+    # import pdb; pdb.set_trace();
     tol = 1e-4
     maxIter = 500
-    lambdas = [1e0 1e1 1e2 1e3 1e4]
+    lambdas = [1e0, 1e1, 1e2, 1e3, 1e4]
     Y = Y0
-    m = len(W[0])
+    m = W.shape[0]
     start = time.time()
+    Y_YYtd = np.zeros((400,10)) # todo later dont hard code this
     for i in range(len(lambdas)):
         for iter in range(maxIter):
             Y0 = Y
             # compute gradient and stepsize
             normr = 0
-            for j in range(len(nFeature[0]) - 1):
-                start, stop = int(nFeature[j]), int(nFeature[j+1])
-                ind1 = np.arange(nFeature[j], nFeature[j+1]).astype(int)
-                ind1_length = ind1.shape[0]
+            for j in range(nFeature.shape[0] - 1):
+                ind1 = getInds(nFeature, j)
+                # import pdb; pdb.set_trace();
                 Yi = Y[ind1,:]
-                YitYi = Yi.T*Yi
-                Y_YitYi[ind1,:] = Yi*YitYi # oh boy this is probably wrong
+                YitYi = Yi.T@Yi
+                Y_YYtd[ind1,:] = Yi@YitYi
                 # step size of regularizer
-                Hr = lambdas[i]*(3*np.linalg.norm(Y[ind1,:].T*Y[ind1,:]) + 1)
-                normr = max(Hr, normr) # check ? what is normr?
+                Hr = lambdas[i]*(3*np.linalg.norm(Y[ind1,:].T@Y[ind1,:],2) + 1) # future note: scipy for sparse matrix might be better
+                normr = max(Hr, normr) # normalized regularizer?
 
-                # update and project
-                Y = Y - g/st # oh shoot we need more variables in method ack
-                for k in range(len(nFeature[0]) - 1):
-                    start2, stop2 = int(nFeature[k]), int(nFeature[k+1])
-                    ind2 = np.arange(nFeature[k], nFeature[k+1]).astype(int)
-                    ind2_length = ind2.shape[0]
-                    Y[ind2,:] = proj2pam(Y[ind2,:], 1e-2) # todo implement
-                
-                RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
-                print("lambda = %d,  iter = %d, Res = %d" % lambdas[i], iter, RelChg)
+            gi = lambdas[i]*(Y_YYtd - Y)
+            gij = -W@Y + Y@(Y.T@Y)
+            g = gi + gij # gradient
+            # import pdb; pdb.set_trace();
+            # W norms different? -ere 3/19/23
+            st = 3*np.linalg.norm(Y.T@Y,2) + scipy.sparse.linalg.norm(W,1) + normr #stepsize
+            # import pdb; pdb.set_trace();
 
-                if RelChg < tol:
-                    break
+            # update and project
+            Y = Y - g/st # oh shoot we need more variables in method ack
+            for k in range(nFeature.shape[0] - 1):
+                ind2 = getInds(nFeature, k)
+                Y[ind2,:] = proj2dpam(Y[ind2,:], 1e-2)
+
+            # import pdb; pdb.set_trace();
+            
+            RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
+            print("lambda = %d,  iter = %d, Res = %.6f" % (lambdas[i], iter, RelChg))
+
+            if RelChg < tol:
+                break
     return Y
+
+'''
+projR function (for proj2dpam)
+Inputs:
+
+Outputs:
+'''
+def projR(X):
+    X_return = np.zeros((X.shape[0], X.shape[1]))
+    for i in range(X.shape[0]):
+        X_return[i,:] = proj2pav(X[i,:].T).T
+    return X_return 
+
+'''
+projC function (for proj2dpam)
+Inputs:
+
+Outputs:
+'''
+def projC(X):
+    X_return = np.zeros((X.shape[0], X.shape[1]))
+    for j in range(X.shape[1]):
+        X_return[:,j] = proj2pavC(X[:,j])
+    return X_return 
+
+'''
+proj2pav function (for proj2dpam)
+Inputs:
+
+Outputs:
+'''
+def proj2pav(y):
+    x = np.zeros((y.shape[0],)) # intialize x
+
+    y = np.clip(y, 0, None)
+    
+    if np.sum(y) < 1:
+        x = y
+    else:
+        u = np.flip(np.sort(y))
+        sv = np.cumsum(u)
+        rho_divide = np.divide((sv - 1), np.arange(1, u.shape[0] + 1))
+        rho = np.argwhere(u > rho_divide)[-1][0] # index is one less than matlab btw
+        theta = max(0, (sv[rho] - 1) / (rho + 1)) # needs +1 due to matlab indexing
+        x = np.maximum(y-theta,0) # elementwise max
+        # import pdb; pdb.set_trace();
+    
+    return x
+
+'''
+proj2pavC function (for proj2dpam)
+Inputs:
+
+Outputs:
+
+Info:
+% project an n-dim vector y to the simplex Dn
+% Dn = { x : x n-dim, 1 >= x >= 0, sum(x) = 1}
+
+% (c) Xiaojing Ye
+% xyex19@gmail.com
+%
+% Algorithm is explained as in the linked document
+% http://arxiv.org/abs/1101.6081
+% or
+% http://ufdc.ufl.edu/IR00000353/
+%
+% Jan. 14, 2011.
+'''
+def proj2pavC(y):
+
+    m = len(y)
+    bget = False
+
+    s = np.flip(np.sort(y))
+    tmpsum = 0
+
+    for ii in range(m-1):
+        tmpsum += s[ii]
+        tmax = (tmpsum - 1)/ (ii + 1) # matlab index + 1 offset
+        if tmax >= s[ii + 1]:
+            # import pdb; pdb.set_trace();
+            bget = True
+            break
+    
+    if not bget:
+        tmax = (tmpsum + s[m - 1] - 1)/m # index offset
+
+    x = np.maximum(y-tmax, 0)
+
+    # import pdb; pdb.set_trace();
+    
+    return x
+
 '''
 proj2dpam function
 Inputs:
@@ -315,7 +435,29 @@ Outputs:
 - X: 
 '''
 def proj2dpam(Y,tol): # todo
-    return None
+    X0 = Y
+    X = Y
+    I2 = 0
+
+    for i in range(10):
+        # row projection
+        X1 = projR(X0 + I2)
+        I1 = X1 - (X0 + I2)
+        X2 = projC(X0 + I1)
+        I2 = X2 - (X0 + I1)
+
+        numElements = X.shape[0] * X.shape[1]
+        chg = np.sum(abs(X2 - X))/numElements
+
+        X = X2
+        if chg < tol:
+            # import pdb; pdb.set_trace();
+            return X
+    
+    # should hopefully never get here -ere
+    print("Error in proj2dpam! Did not converge.")
+    exit()
+    
 
 '''
 Run the Proposed Method Matching
@@ -331,35 +473,50 @@ Outputs:
 '''
 def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
     print("In Proposed Method function.")
+    print("Inputs: nFeature=", nFeature[0])
 
     tol_Y = 1e-4
     var_lambda = 1 # weight of geometric constant, redundant, made as param ????
     maxIter = 500
     maxIter_Y = 500
     verbose = True
+    k = Size
+    # import pdb; pdb.set_trace();
+    W = vM
 
     print("Running Proposed Method: lambda=%d, rank=%d, tol_Y=%d, maxIter=%d, maxIter_Y=%d" % (var_lambda, rank, tol_Y, maxIter, maxIter_Y))
 
-    m = len(vM[0])
+    # print(vM)
+    m = vM.shape[0]
     
     nFeature = np.cumsum(nFeature)
     nFeature = np.insert(nFeature, 0, 0)
 
-    Y = np.random.rand(m, k) # initialize Y randomly ??
+    # Y = np.random.rand(m, k) # initialize Y randomly, doesn't matter, random guess
+    # using matlab saved Y as file
+    mat = scipy.io.loadmat("Y.mat")
+    Y = np.array(mat['Y'])
 
     start = time.time()
 
     #todo implement initial_Y method
-    Y = initial_Y(Y, W, nFeature) # initialie Y by projected gradient descent
+    Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
+
+    print(Y.shape)
+    # import pdb; pdb.set_trace()
 
     # initialize X
-    U = np.zeros(m,k)
-    C_norm = 0 # todo implement
-    X = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # todo implement
+    U = np.zeros((m,k))
+    # C / ((std(C(1,:)) + std(C(2,:)))/2)
+    C_norm_factor = (np.std(C[0,:]) + np.std(C[1,:])) / 2.0
+    C_norm = C / C_norm_factor
+    import pdb; pdb.set_trace()
+    X = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # start here next time 3/19/23 ere
 
     # update Y X Z
-    Rho = [1e0 1e1 1e2]
+    Rho = [1e0, 1e1, 1e2]
     Iter = 0
+    import pdb; pdb.set_trace()
     for i in range(len(Rho)):
         rho = Rho[i]
         for iter in range(maxIter):
@@ -371,10 +528,8 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
                 st = 3*np.linalg.norm(Y.T*Y) + np.linalg.norm(W) + rho
                 Y = Y - g/st
                 for i2 in range(nFeature.shape[0] - 1):
-                    start, stop = int(nFeature[i2]), int(nFeature[i2+1])
-                    ind1 = np.arange(nFeature[i2], nFeature[i2+1]).astype(int)
-                    ind1_length = ind1.shape[0]
-                    Y[start:stop, start:stop] = proj2dpam(Y[ind1,:], 1e-2) # todo implement proj2dpam
+                    ind1 = getInds(nFeature, i2)
+                    Y[ind1, ind1] = proj2dpam(Y[ind1,:], 1e-2) # todo implement proj2dpam
                 t1_stop = time.time()
                 t1 = t1_stop - t1_start
                 RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)

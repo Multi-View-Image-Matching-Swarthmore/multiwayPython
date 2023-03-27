@@ -248,12 +248,12 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
     M = np.zeros((2*n, X.shape[1]))
     for i in range(n):
         ind1 = getInds(nFeature, i)
-        import pdb; pdb.set_trace()
-        M[2*i:2*i+2,:] = C[:,ind1]@X[ind1,:] # not correct? X is not the same
+        M[2*i:2*i+2,:] = C[:,ind1]@X[ind1,:]
     # update Z
+    # import pdb; pdb.set_trace()
     U, S, V = np.linalg.svd(M, full_matrices=False) # econ setting (dont worry about it)
     # DEBUGGING HERE
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     S = np.diag(S)
     Z = U[:,:S.shape[0]]@S[:,:rank]@V[:rank,:] 
 
@@ -267,7 +267,6 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
         # pdist2 Matlab -> cdist Scipy?
         # https://stackoverflow.com/questions/43650931/python-alternative-for-calculating-pairwise-distance-between-two-sets-of-2d-poin
         D = var_lambda*cdist(Ci.T,Zi.T, "euclidean") # still issues
-        import pdb; pdb.set_trace()
         distMatrix = D - rho*Yi - np.min(D - rho*Yi)
         assignment = assignmentoptimal(double(distMatrix)) # todo implement assignmentoptimal
         Xhi = np.zeros((ind1_length, K))
@@ -276,7 +275,7 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
         # https://stackoverflow.com/questions/28995146/matlab-ind2sub-equivalent-in-python
         Xhi[indices] = 1
         X[ind1,:] = Xhi
-
+        import pdb; pdb.set_trace()
         return X
 '''
 initial_Y function
@@ -510,7 +509,7 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
     # C / ((std(C(1,:)) + std(C(2,:)))/2)
     C_norm_factor = (np.std(C[0,:]) + np.std(C[1,:])) / 2.0
     C_norm = C / C_norm_factor
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     X = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # start here next time 3/19/23 ere
 
     # update Y X Z

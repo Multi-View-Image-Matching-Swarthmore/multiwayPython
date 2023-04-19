@@ -3,7 +3,7 @@ from scipy.sparse.linalg import eigs
 from scipy.sparse import csr_matrix
 from scipy.spatial.distance import cdist
 import time
-import sys
+import os, sys
 import math
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -242,6 +242,7 @@ def assignmentoptimalpy(distMatrix):
     # import pdb; pdb.set_trace();
     # load the shared library into ctypes
     libname = pathlib.Path.cwd() / "utils" / "assignmentoptimal.so"
+    print(libname)
     c_lib = ctypes.CDLL(libname)
 
     height, width = distMatrix.shape
@@ -253,6 +254,7 @@ def assignmentoptimalpy(distMatrix):
 
     # import pdb; pdb.set_trace();
 
+    # TODO STEPHEN
     # void assignmentoptimal(double *assignment, double *cost, double *distMatrixIn, int nOfRows, int nOfColumns)
     c_lib.assignmentoptimalwrapper(assignment.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), ctypes.addressof(ctypes.c_double(cost)), distMatrix2.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), int(height), int(width))
 
@@ -286,10 +288,6 @@ def assignmentoptimalpy(distMatrix):
     # import pdb; pdb.set_trace();
 
     # return None
-
-
-
-
 
 
 '''
@@ -564,7 +562,11 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
     start = time.time()
 
     #todo implement initial_Y method
-    Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
+    if os.path.exists("Y.npy"):
+        Y = np.load("Y.npy")
+    else:
+        Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
+        np.save("Y.npy", Y)
 
     print(Y.shape)
     # import pdb; pdb.set_trace()

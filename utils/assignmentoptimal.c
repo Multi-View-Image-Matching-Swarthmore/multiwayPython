@@ -11,7 +11,7 @@ function [assignment, cost] = assignmentoptimal(distMatrix)
 #include <string.h>
 #include <math.h> // for isfinite() function
 
-#define CHECK_FOR_INF
+// #define CHECK_FOR_INF
 // #define ONE_INDEXING
 
 void assignmentoptimal(double *assignment, double *cost, double *distMatrix, int nOfRows, int nOfColumns);
@@ -22,7 +22,7 @@ void step2b(double *assignment, double *distMatrix, bool *starMatrix, bool *newS
 void step3 (double *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim);
 void step4 (double *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim, int row, int col);
 void step5 (double *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim);
-void assignmentoptimalwrapper(double *assignment[], double *cost, double *distMatrixIn[], int nOfRows, int nOfColumns);
+void assignmentoptimalwrapper(double *assignment, double *cost, double *distMatrixIn, int nOfRows, int nOfColumns);
 
 // void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 // {
@@ -45,18 +45,19 @@ void assignmentoptimalwrapper(double *assignment[], double *cost, double *distMa
 // }
 
 // Erebus Oh
-// int main(){
-// 	double dm[100] = {1.71084257,2.56269316,1.10421985,4.42921508,1.40518792,3.59343619,1.50557291,1.07023789,1.1164952,0.34875429,2.71791384,1.17847518,4.44985785,1.10303009,1.92029236,0.24077492,1.93587172,3.9843357,3.87621369,3.69675975,2.26069774,3.6604563,0.7434206,5.67360805,2.80958522,4.89247368,2.69743819,0.66943453,0.82359147,1.30135694,1.22610976,2.62819132,1.24971917,4.65634286,1.93492824,3.89894207,1.71486419,0.34602627,0.1971919,1.10340766,0.33648572,1.2323007,2.7385267,3.2486663,1.46741569,2.60736588,0.92749846,1.92766676,1.76421822,2.24367112,1.04236175,1.06490256,2.53913257,2.9888149,0.5087322,2.19472558,0.00941004,2.01536037,1.9126659,1.84605306,1.63958703,1.38765854,2.56796295,3.00753466,0.08759551,2.15439026,0.62617693,2.27090342,2.21200872,1.79550842,3.59089709,2.02888441,5.53852687,0,3.03456697,0.85954994,2.97669412,5.00159276,4.87691477,4.8014844,2.55645388,3.74906993,0.13720995,5.68265559,2.67920299,4.85774849,2.71183463,1.03455732,1.21742232,0.92511776,1.65923828,0.17425316,3.77225297,1.91109706,1.53487578,1.30778618,1.22283393,3.12403682,2.98543326,3.10783051};
-// 	double cost = 0.0;
-// 	double assignment[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-// 	printf("%d\n", -1);
-// 	assignmentoptimal(&assignment[0], &cost, &dm[0], 10, 10);
-// 	printf("%d\n", 8);
-// }
+int main(){
+	// double dm[100] = {1.71084257,2.56269316,1.10421985,4.42921508,1.40518792,3.59343619,1.50557291,1.07023789,1.1164952,0.34875429,2.71791384,1.17847518,4.44985785,1.10303009,1.92029236,0.24077492,1.93587172,3.9843357,3.87621369,3.69675975,2.26069774,3.6604563,0.7434206,5.67360805,2.80958522,4.89247368,2.69743819,0.66943453,0.82359147,1.30135694,1.22610976,2.62819132,1.24971917,4.65634286,1.93492824,3.89894207,1.71486419,0.34602627,0.1971919,1.10340766,0.33648572,1.2323007,2.7385267,3.2486663,1.46741569,2.60736588,0.92749846,1.92766676,1.76421822,2.24367112,1.04236175,1.06490256,2.53913257,2.9888149,0.5087322,2.19472558,0.00941004,2.01536037,1.9126659,1.84605306,1.63958703,1.38765854,2.56796295,3.00753466,0.08759551,2.15439026,0.62617693,2.27090342,2.21200872,1.79550842,3.59089709,2.02888441,5.53852687,0,3.03456697,0.85954994,2.97669412,5.00159276,4.87691477,4.8014844,2.55645388,3.74906993,0.13720995,5.68265559,2.67920299,4.85774849,2.71183463,1.03455732,1.21742232,0.92511776,1.65923828,0.17425316,3.77225297,1.91109706,1.53487578,1.30778618,1.22283393,3.12403682,2.98543326,3.10783051};
+	// double cost = 0.0;
+	// double assignment[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	// printf("%d\n", -1);
+	// assignmentoptimal(&assignment[0], &cost, &dm[0], 10, 10);
+	printf("%d\n", 8);
+}
 // Erebus Oh
-void assignmentoptimalwrapper(double *assignment[], double *cost, double *distMatrixIn[], int nOfRows, int nOfColumns){
+// cd utils && cc -shared -fPIC -o assignmentoptimal.so assignmentoptimal.c && cd .. && python test_willow.py
+void assignmentoptimalwrapper(double *assignment, double *cost, double *distMatrixIn, int nOfRows, int nOfColumns){
 	printf("%d\n", 0);
-	assignmentoptimal(assignment[0], cost, distMatrixIn[0], 10, 10);
+	assignmentoptimal(assignment, cost, distMatrixIn, 10, 10);
 	printf("%d\n", 8);
 }
 
@@ -70,7 +71,8 @@ void assignmentoptimal(double *assignment, double *cost, double *distMatrixIn, i
 	double maxFiniteValue, infValue;
 #endif
 	
-	printf("%d\n", -1);
+	printf("Update test: %d\n", -1);
+	printf("%f\n", *cost);
 
 	/* initialization */
 	*cost = 0;

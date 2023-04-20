@@ -296,14 +296,13 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
 
     # update X
     for i in range(n):
+        # print(i)
         ind1 = getInds(nFeature, i)
         ind1_length = ind1.shape[0]
         Ci = C[:,ind1]
         Zi = Z[2*i:2*i+2, :]
         Yi = Y[ind1,:]
-        # hungarian <- wtf is this -ere
-        # pdist2 Matlab -> cdist Scipy?
-        # https://stackoverflow.com/questions/43650931/python-alternative-for-calculating-pairwise-distance-between-two-sets-of-2d-poin
+        # hungarian
         D = var_lambda*cdist(Ci.T,Zi.T, "euclidean") # still issues
         distMatrix = D - rho*Yi - np.min(D - rho*Yi)
         # assignment = assignmentoptimalpy(distMatrix.astype(np.float64)) # todo implement assignmentoptimal
@@ -311,23 +310,13 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
         aofilename = "ao" + str(i+1) + ".mat"
         aoFilenameFull = pathlib.Path.cwd() / "assignmentoptimals" / aofilename
         mat = scipy.io.loadmat(aoFilenameFull)
-        assignment = np.array(mat['assignment']).reshape(1,-1)[0] - 1 # Matlab indexing starts 1
-
-        # print(assignment)
+        assignment = np.array(mat['assignment']).reshape(1,-1)[0]
 
         Xhi = np.zeros((ind1_length, K))
         # print(Xhi.shape)
-        q = np.where(assignment >= 1)[0] # check?
-        # print(q)
-        # q = np.vstack((q, assignment[q]))
-        # print(q)
-        # indices = np.ravel_multi_index(q, Xhi.shape, order='F') # equiv to sub2ind Matlab
-        # print(indices)
-        # import pdb; pdb.set_trace()
-        Xhi[q, assignment[q]] = 1
+        q = np.where(assignment >= 1)[0]
+        Xhi[q, assignment[q]-1] = 1 # Matlab is 1 indexed
         X[ind1,:] = Xhi
-        # import pdb; pdb.set_trace()
-    import pdb; pdb.set_trace()
     return X
 '''
 initial_Y function

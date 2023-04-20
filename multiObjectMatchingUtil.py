@@ -289,7 +289,6 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
     # update Z
     # import pdb; pdb.set_trace()
     U, S, V = np.linalg.svd(M, full_matrices=False) # econ setting (dont worry about it)
-    # DEBUGGING HERE
     # import pdb; pdb.set_trace()
     S = np.diag(S)
     Z = U[:,:S.shape[0]]@S[:,:rank]@V[:rank,:] 
@@ -317,7 +316,7 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
         q = np.where(assignment >= 1)[0]
         Xhi[q, assignment[q]-1] = 1 # Matlab is 1 indexed
         X[ind1,:] = Xhi
-    return X
+    return X, M
 '''
 initial_Y function
 Inputs:
@@ -555,50 +554,58 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
     C_norm_factor = (np.std(C[0,:]) + np.std(C[1,:])) / 2.0
     C_norm = C / C_norm_factor
     # import pdb; pdb.set_trace()
-    X = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # start here next time 3/19/23 ere
+    X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # start here next time 3/19/23 ere
 
     # update Y X Z
     Rho = [1e0, 1e1, 1e2]
     Iter = 0
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     for i in range(len(Rho)):
         rho = Rho[i]
-        for iter in range(maxIter):
+        for iter1 in range(1, maxIter+1):
+            # print(iter1)
             # update Y
             for iter_Y in range(maxIter_Y):
                 t1_start = time.time()
                 Y0 = Y
-                g = - W*Y + Y*(Y.T * Y) + rho*(Y - X)
-                st = 3*np.linalg.norm(Y.T*Y) + np.linalg.norm(W) + rho
+                # import pdb; pdb.set_trace()
+                g = - W@Y + Y@(Y.T @ Y) + rho*(Y - X)
+                # import pdb; pdb.set_trace()
+                st = 3*np.linalg.norm(Y.T@Y) + scipy.sparse.linalg.norm(W) + rho
                 Y = Y - g/st
                 for i2 in range(nFeature.shape[0] - 1):
                     ind1 = getInds(nFeature, i2)
-                    Y[ind1, ind1] = proj2dpam(Y[ind1,:], 1e-2) # todo implement proj2dpam
+                    # import pdb; pdb.set_trace()
+                    Y[ind1, :] = proj2dpam(Y[ind1,:], 1e-2)
                 t1_stop = time.time()
                 t1 = t1_stop - t1_start
                 RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
 
                 if verbose:
-                    print("Iter = %d, iter_Y  = %d, Res = %e, t = %f\n" % iter, iter_Y, RelChg, t1)
+                    print("Iter = %d, iter_Y  = %d, Res = %e, t = %f\n" % (iter1, iter_Y, RelChg, t1))
 
                 if RelChg < tol_Y:
                     break
             # update X
             X0 = X
-            X, M = get_newX(Y, X, C_norm, rho, k, rank, nFeature, var_lambda) # todo implement get_newX
+            X, M = get_newX(Y, X, C_norm, rho, k, rank, nFeature, var_lambda)
            
             if np.sum(abs(X - X0)) < 1: # check?
                 break
 
-        Iter = Iter + iter # wtf come back to this
+        Iter = Iter + iter1 # wtf come back to this
+
+    # import pdb; pdb.set_trace()
 
     # overall match
     stop = time.time()
     runtime = stop - start
     iterations = Iter
-    XP = X*X.T
+    XP = X@X.T
 
-    print("Time = %fs, Overall Iter = %d" % runtime, iterations)
+    print("Time = %fs, Overall Iter = %d" % (runtime, iterations))
+
+    import pdb; pdb.set_trace()
 
     # M_out, eigV, tInfo, Z
     return XP, X, runtime, M

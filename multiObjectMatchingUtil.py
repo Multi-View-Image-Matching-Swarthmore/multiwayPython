@@ -262,32 +262,6 @@ def assignmentoptimalpy(distMatrix):
     print("Made it here!")
     exit()
     return None
-    # # save original distMatrix for cost computation
-    # originalDistMatrix = distMatrix # should be 10x10 numpy
-
-    # # check for negative elements
-    # if distMatrix.any() < 0:
-    #     print("Errpr: All matrix elements have to be non-negative.")
-    #     exit()
-    
-    # # get matrix dimensions
-    # height, width = distMatrix.shape
-    # totalSize = height * width
-    # assignment = np.zeros((height, 1))
-    # cost = 0
-    
-    # # check for infinite values, change inifinity to large finite value
-    # infiniteIndex = np.isinf(distMatrix).nonzero().astype(int) # gets all indices that have +/- infinity
-    # if infiniteIndex.shape[0] >= totalSize:
-    #     # all elements are infinite
-    #     return assignment, cost
-    # distMatrix[infiniteIndex] = -1 # set all inifinity values to -1 temporarily
-    # maxValue = max(10, 10 * np.amax(distMatrix) * height * width) # make large finite value
-    # distMatrix[infiniteIndex] = maxValue # set infinity values to large finite value
-
-    # import pdb; pdb.set_trace();
-
-    # return None
 
 
 '''
@@ -323,6 +297,7 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
     # update X
     for i in range(n):
         ind1 = getInds(nFeature, i)
+        ind1_length = ind1.shape[0]
         Ci = C[:,ind1]
         Zi = Z[2*i:2*i+2, :]
         Yi = Y[ind1,:]
@@ -331,15 +306,29 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
         # https://stackoverflow.com/questions/43650931/python-alternative-for-calculating-pairwise-distance-between-two-sets-of-2d-poin
         D = var_lambda*cdist(Ci.T,Zi.T, "euclidean") # still issues
         distMatrix = D - rho*Yi - np.min(D - rho*Yi)
-        assignment = assignmentoptimalpy(distMatrix.astype(np.float64)) # todo implement assignmentoptimal
+        # assignment = assignmentoptimalpy(distMatrix.astype(np.float64)) # todo implement assignmentoptimal
+        # just import it from Matlab
+        aofilename = "ao" + str(i+1) + ".mat"
+        aoFilenameFull = pathlib.Path.cwd() / "assignmentoptimals" / aofilename
+        mat = scipy.io.loadmat(aoFilenameFull)
+        assignment = np.array(mat['assignment']).reshape(1,-1)[0] - 1 # Matlab indexing starts 1
+
+        # print(assignment)
+
         Xhi = np.zeros((ind1_length, K))
-        q = np.find(assignment >= 1) # check?
-        indices = q*len(Xhi[0]) + assignment[q] # check equiv to sub2ind Matlab
-        # https://stackoverflow.com/questions/28995146/matlab-ind2sub-equivalent-in-python
-        Xhi[indices] = 1
+        # print(Xhi.shape)
+        q = np.where(assignment >= 1)[0] # check?
+        # print(q)
+        # q = np.vstack((q, assignment[q]))
+        # print(q)
+        # indices = np.ravel_multi_index(q, Xhi.shape, order='F') # equiv to sub2ind Matlab
+        # print(indices)
+        # import pdb; pdb.set_trace()
+        Xhi[q, assignment[q]] = 1
         X[ind1,:] = Xhi
-        import pdb; pdb.set_trace()
-        return X
+        # import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
+    return X
 '''
 initial_Y function
 Inputs:

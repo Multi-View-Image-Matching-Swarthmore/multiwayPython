@@ -136,7 +136,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         print("MatchALS...")
         M_out, eigV, tInfo, iter = matchALS(vM, nFeature, Size)
         exit()
-    elif method == "pg": #todo
+    elif method == "pg":
+        print("Proposed Method Matching...")
         M_out, eigV, tInfo, Z = proposedMethod(vM, C, nFeature, Size)
         # print("pg (proposed method) not implemented! Sorry!")
         exit()
@@ -152,9 +153,10 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
             print()
             # [ind1,ind2] = find(   M_out( csum(i)+1:csum(i+1) , csum(j)+1:csum(j+1) )   );
             # return row, col of the nonzero elements indices
-            rowStart = cumulativeIndex[i] + 1
+            # matlab 1 indexed
+            rowStart = cumulativeIndex[i] + 1 - 1
             rowStop = cumulativeIndex[i+1]
-            colStart = cumulativeIndex[j] + 1
+            colStart = cumulativeIndex[j] + 1 - 1
             colStop = cumulativeIndex[j+1]
 
             # print(rowStart, rowStop)
@@ -175,22 +177,26 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
                 # Xraw = vM(csum(i)+1:csum(i+1),csum(j)+1:csum(j+1));
                 Xraw = vM[rowStart:rowStop, colStart:colStop]
 
+                # import pdb; pdb.set_trace();
+
                 # # TODO: help
                 # Xraw = Xraw(sub2ind(size(Xraw),ind1,ind2));
                 # https://stackoverflow.com/questions/15230179/how-to-get-the-linear-index-for-a-numpy-array-sub2ind
-                Xraw = Xraw
+                Xraw = np.asarray(Xraw[ind1, ind2])[0]
 
                 # X = greedyMatch([ind1';ind2'],Xraw);
                 # def greedyMatch(match, score, nMax=np.inf):
-                arr = np.concatenate(ind1.T, ind2.T, axis=1) # double check axis?
-                X = greedyMatch(arr, Xraw)
+                # import pdb; pdb.set_trace();
+                arr = np.vstack((ind2, ind1))
+                import pdb; pdb.set_trace();
+                X = greedyMatch(arr, Xraw) # needs a bit more debugging
 
                 # store results
                 # jMatch(i,j).matchInfo.match = [ind1';ind2'];
                 # jMatch(i,j).X = X;
                 # jMatch(i,j).Xraw = Xraw;
                 # jMatch(i,j).filename = [filename(i),filename(j)];
-                f = np.array([filename[i], filename[j]])
+                f = np.array([filename[i], filename[j]]) # filename is empty oof
 
                 # jMatch(i,j).nFeature = [nFeature(i),nFeature(j)];
                 nf = np.array([nFeature[i], nFeature[j]])
@@ -207,6 +213,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     # print("end")
     # exit()
+
+    import pdb; pdb.set_trace();
 
     return jMatch,jmInfo,tInfo
 
@@ -538,7 +546,6 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
 
     start = time.time()
 
-    #todo implement initial_Y method
     if os.path.exists("Y.npy"):
         Y = np.load("Y.npy")
     else:
@@ -554,7 +561,13 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
     C_norm_factor = (np.std(C[0,:]) + np.std(C[1,:])) / 2.0
     C_norm = C / C_norm_factor
     # import pdb; pdb.set_trace()
-    X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # start here next time 3/19/23 ere
+
+    # speed up get new X
+    if os.path.exists("X_init.npy"):
+        X = np.load("X_init.npy")
+    else:
+        X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda)
+        np.save("X_init.npy", X)
 
     # update Y X Z
     Rho = [1e0, 1e1, 1e2]
@@ -585,6 +598,7 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
                     print("Iter = %d, iter_Y  = %d, Res = %e, t = %f\n" % (iter1, iter_Y, RelChg, t1))
 
                 if RelChg < tol_Y:
+                    # import pdb; pdb.set_trace()
                     break
             # update X
             X0 = X
@@ -605,7 +619,7 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
 
     print("Time = %fs, Overall Iter = %d" % (runtime, iterations))
 
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     # M_out, eigV, tInfo, Z
     return XP, X, runtime, M

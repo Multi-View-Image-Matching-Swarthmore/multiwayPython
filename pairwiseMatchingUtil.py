@@ -258,23 +258,26 @@ def initMatch(viewPair,kNNInit,nMaxInit,threshScore,threshRatio):
 Perform Greedy Matching
 Inputs:
 - match: numpy array of matches
-- score: Xraw, similarity scores
+- score: Xraw, similarity scores, 1D, horizontal
 -(optional)nMax: kinda wack, convergence condition?
 Outputs:
 -
 '''
+# check if works for normal score arrays
+# works for sprase matrices right now
 def greedyMatch(match, score, nMax=np.inf):
-    flag = np.zeros((len(score), 1))
+    # flag = np.zeros((len(score), 1))
+    flag = np.zeros((score.shape[0], 1))
     # print(flag.shape)
     # print(match.shape)
     # print(score.shape)
 
     count = 0
-    score = score.copy()
+    score = np.copy(score)
     max_ind = np.argmax(score)
-    max_value = score[max_ind]
+    max_value = np.amax(score)
     # print(max_value)
-    while max_value > np.NINF and count < nMax: # sus
+    while (max_value > np.NINF and count < nMax): # sus
         count += 1
         flag[max_ind] = 1
         # score[match[0,:] == match[0,max_ind]] = np.NINF
@@ -282,8 +285,9 @@ def greedyMatch(match, score, nMax=np.inf):
         # print(match[max_ind])
         # print(match)
         # print(match[:,1])
-        ind1 = np.where(match[:,0] == match[max_ind][0])
-        ind2 = np.where(match[:,1] == match[max_ind][1])
+        # import pdb; pdb.set_trace();
+        ind1 = np.where(match[0,:] == match[0][max_ind])[0][0]
+        ind2 = np.where(match[1,:] == match[1][max_ind])[0][0]
         # print("sfds")
         # print(ind1)
         # print(ind2)
@@ -292,6 +296,7 @@ def greedyMatch(match, score, nMax=np.inf):
 
         max_ind = np.argmax(score)
         max_value = score[max_ind]
+        import pdb; pdb.set_trace();
 
     # print(np.sum(flag))
 

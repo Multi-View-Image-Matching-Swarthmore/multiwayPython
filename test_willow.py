@@ -96,16 +96,29 @@ def main():
     #   'matchlift': MatchLift, [Near-optimal joint object matching via convex relaxation, ICML 2014]
     #   'als': MatchALS, [Multi-Image Matching via Fast Alternating Minimization, CVPR 2015]
     print("Multi Object Matching")
-    jMatch,jmInfo = runJointMatch(pMatch,C,method='als',univsize=10,rank=3,l=1)
 
-    print("Exiting after Multi Object Matching in test_willow")
-    exit()
+    # jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
+    # TEMP COMMENT TO DEBUG, rememeber to remove -ere 9/17/2023
+    # np.save("jMatch", jMatch)
+    # np.save("jmInfo", jmInfo)
+
+    # print(jMatch)
+    # print(jmInfo)
+    # print(tInfo)
+    # import pdb; pdb.set_trace(); # 6/20/23 start here, compare with matlab
+
+    # print("Exiting after Multi Object Matching in test_willow")
+    # exit()
+
+    jMatch = np.load("jMatch.npy", allow_pickle=True)
+    jmInfo = np.load("jmInfo.npy", allow_pickle=True)
 
 # # TODO: all code below this point is unimplemented -ere
 
     # Evaluate
     # X1 = pMatch2perm(pMatch); % pairwise matching result
     X1 = pMatch2perm(pMatch) # pairwise matching result
+    import pdb; pdb.set_trace();
 
     # X2 = pMatch2perm(jMatch); % joint matching result
     X2 = pMatch2perm(jMatch) # joint matching result

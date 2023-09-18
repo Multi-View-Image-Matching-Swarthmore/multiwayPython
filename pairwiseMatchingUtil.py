@@ -296,7 +296,7 @@ def greedyMatch(match, score, nMax=np.inf):
 
         max_ind = np.argmax(score)
         max_value = score[max_ind]
-        import pdb; pdb.set_trace();
+        # import pdb; pdb.set_trace();
 
     # print(np.sum(flag))
 

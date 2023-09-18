@@ -123,7 +123,6 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     Z = []
     print("Running joint match, problem size = (" + str(vM.shape[0]) + "," + str(Size) + ")")
 
-    method = "pg" # debugging line, shoudl eventually remove -ere
     # import pdb; pdb.set_trace();
 
     if method == "spectral":
@@ -140,7 +139,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         print("Proposed Method Matching...")
         M_out, eigV, tInfo, Z = proposedMethod(vM, C, nFeature, Size)
         # print("pg (proposed method) not implemented! Sorry!")
-        exit()
+        # print("here !")
+        # exit()
     else:
         print("Unkown Multi-Object Matching method:", method)
         exit()
@@ -188,7 +188,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
                 # def greedyMatch(match, score, nMax=np.inf):
                 # import pdb; pdb.set_trace();
                 arr = np.vstack((ind2, ind1))
-                import pdb; pdb.set_trace();
+                # import pdb; pdb.set_trace();
                 X = greedyMatch(arr, Xraw) # needs a bit more debugging
 
                 # store results
@@ -214,7 +214,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     # print("end")
     # exit()
 
-    import pdb; pdb.set_trace();
+    # import pdb; pdb.set_trace();
 
     return jMatch,jmInfo,tInfo
 

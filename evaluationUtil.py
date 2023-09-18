@@ -1,18 +1,24 @@
 import numpy as np
 
 from classes import pairwiseMatches, jointMatchInfo
+from scipy.sparse import csr_matrix
+
+# debugging function
+def debugNorm(A):
+    return np.linalg.norm(A, ord=2)
 
 
 def pMatch2perm(pMatch):
-
     pHeight = pMatch.shape[0]
     pWidth = pMatch.shape[1] # shld be the same
 
-    # nFeature = zeros(size(pMatch,1),1);
-    nFeature = np.zeros(pHeight, 1)
+    nFeature = np.zeros((pHeight, 1))
+
+    # import pdb; pdb.set_trace();
+
 
     # filename = cell(size(pMatch,1),1);
-    filename = None # # TODO:
+    filename = np.zeros(nFeature.shape, dtype=str)
 
     # for i = 1:size(pMatch,1)
     #     for j = i+1:size(pMatch,2)
@@ -44,9 +50,33 @@ def pMatch2perm(pMatch):
 
     lastIndex = int(cumulativeIndex[cumulativeIndex.shape[0] - 1])
 
-    ## TODO:
+    # import pdb; pdb.set_trace();
+
     # M = sparse(cumIndex(end),cumIndex(end));
     # M = csr_matrix((score, (ind1, ind2)), shape=(lastIndex, lastIndex))
+
+    # M = csr_matrix((lastIndex, lastIndex)) # should be 400
+    data = np.empty([])
+    indices = cumulativeIndex
+    indptr = np.array([])
+
+    for i in range(pHeight):
+        for j in range(pWidth):
+            if pMatch[i][j] is not None:
+                data = np.append(data, pMatch[i][j].X.reshape((-1,)))
+                # rows = np.append(rows, pMatch[i][j].matchInfo[:, 0])
+                # cols = np.append(cols, pMatch[i][j].matchInfo[:, 1])
+                # indices = np.append(cumulativeIndex[i], cumulativeIndex[j])
+                indptr = np.append(indptr, pMatch[i][j].matchInfo)
+                import pdb; pdb.set_trace();
+
+
+    
+    import pdb; pdb.set_trace();
+
+    # M = csr_matrix((pMatch[i][j].X.reshape((-1,)), (pMatch[i][j].matchInfo[:, 0], pMatch[i][j].matchInfo[:, 1])), shape=(int(nFeature[i]), int(nFeature[j])))
+    M = csr_matrix((data, indices, indptr), shape=((lastIndex,lastIndex)))
+    M.eliminate_zeros()
 
     # for i = 1:size(pMatch,1)
     #     for j = i+1:size(pMatch,2)
@@ -58,6 +88,8 @@ def pMatch2perm(pMatch):
     #     end
     # end
     # M = M + M';
+
+    M = M + M.T
 
     return M
 

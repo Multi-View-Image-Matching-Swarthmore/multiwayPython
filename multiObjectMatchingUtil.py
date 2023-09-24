@@ -34,7 +34,7 @@ Outputs:
 def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     nFeature = np.zeros((pMatch.shape[0], 1))
     # print(nFeature.shape)
-    filename = np.empty((nFeature.shape), dtype=str)
+    filename = np.zeros((nFeature.shape[0],), dtype=object)
     # print(filename.shape)
 
     nMatches = 0
@@ -53,13 +53,18 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
                 print("filename is empty for:", i, j)
                 exit()
 
+            # import pdb; pdb.set_trace();
+
             nMatches += np.sum(pMatch[i][j].X)
-            nFeature[i] = pMatch[i][j].nFeature
-            nFeature[j] = pMatch[i][j].nFeature
+            nFeature[i] = pMatch[i][j].nFeature[0]
+            nFeature[j] = pMatch[i][j].nFeature[1]
             filename[i] = pMatch[i][j].filename[0]
             filename[j] = pMatch[i][j].filename[1]
+            # import pdb; pdb.set_trace();
 
     # print(nFeature.shape)
+
+    # import pdb; pdb.set_trace();
 
 
     # initilize variables to run joint matching
@@ -203,6 +208,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
                 jMatch[i][j] = pairwiseMatches(arr, nf, Xraw, X)
                 jMatch[i][j].filename = f
+                # import pdb; pdb.set_trace();
 
     # jmInfo.eigV = eigV;
     # jmInfo.nFeature = csum;

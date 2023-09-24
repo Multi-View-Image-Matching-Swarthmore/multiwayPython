@@ -95,6 +95,7 @@ def runGraphMatchBatch(datapath,viewList,pairingMode, pairingParam,wEdge=0):
                 # print(matchData)
                 matchData.filename = (viewList[i], viewList[j])
                 pairMatches[i][j] = matchData; # add to array
+                # import pdb; pdb.set_trace();
 
     return pairMatches
 
@@ -127,7 +128,10 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
     # number of features
     viewMat1 = scipy.io.loadmat(viewPair[0])
-    nFeature = viewMat1['nfeature'][0][0]
+    viewMat2 = scipy.io.loadmat(viewPair[1])
+    nFeature = [viewMat1['nfeature'][0][0], viewMat2['nfeature'][0][0]]
+
+    # import pdb; pdb.set_trace();
 
     if len(matchInfo) == 0: # if match list is empty, exit method
         print("matchInfo list empty")
@@ -144,10 +148,11 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
 
         # do some spooky math
-        print(matchInfo.shape) # (100, 2)
+        # print(matchInfo.shape) # (100, 2)
         unique_features1, new_feat1 = np.unique(matchInfo[:,0], return_inverse=True)
-        print(unique_features1)
-        print(new_feat1)
+        # print(unique_features1)
+        # print(new_feat1)
+
         # increasing order
         # ia = index of unique values in original array
         # ic = original list in terms of unique array
@@ -181,8 +186,7 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
         exit()
 
     # load calculate X and Xraw into class
-    mData.Xraw = np.array(Xraw).astype(np.float32)
-    mData.X = X
+    Xraw = np.array(Xraw).astype(np.float32)
 
     mData = pairwiseMatches(matchInfo, nFeature, Xraw, X)
 
@@ -272,6 +276,8 @@ def greedyMatch(match, score, nMax=np.inf):
     # print(match.shape)
     # print(score.shape)
 
+    match = np.transpose(match) # make (10,2)
+
     count = 0
     score = np.copy(score)
     max_ind = np.argmax(score)
@@ -286,8 +292,8 @@ def greedyMatch(match, score, nMax=np.inf):
         # print(match)
         # print(match[:,1])
         # import pdb; pdb.set_trace();
-        ind1 = np.where(match[0,:] == match[0][max_ind])[0][0]
-        ind2 = np.where(match[1,:] == match[1][max_ind])[0][0]
+        ind1 = np.where(match[:,0] == match[max_ind][0])[0]
+        ind2 = np.where(match[:,1] == match[max_ind][1])[0]
         # print("sfds")
         # print(ind1)
         # print(ind2)

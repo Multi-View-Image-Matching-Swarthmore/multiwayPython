@@ -6,6 +6,7 @@ import scipy.io
 from pairwiseMatchingUtil import runGraphMatchBatch
 from multiObjectMatchingUtil import runJointMatch
 from evaluationUtil import pMatch2perm, evalMMatch
+from scipy.sparse import csr_matrix
 # import pdb;  pdb.set_trace()
 # ^helpful for debugging, gdb but for python
 
@@ -51,6 +52,7 @@ def main():
     print("Pairwise Matching")
     pMatch = None
 
+    # if False:
     if os.path.exists(savefile): # if pairwise hypercols file exists, load it in
         pMatch = np.load(savefile, allow_pickle=True, fix_imports=True)
     else: # pairwise file does not exist, create it
@@ -61,7 +63,7 @@ def main():
         # print(pMatch.shape)
         np.save(savefile, pMatch, allow_pickle=True, fix_imports=True) # save file
 
-
+    # import pdb; pdb.set_trace();
 
     # Construct coordinate matrix C:2*m
     # 2xm matrix
@@ -97,10 +99,10 @@ def main():
     #   'als': MatchALS, [Multi-Image Matching via Fast Alternating Minimization, CVPR 2015]
     print("Multi Object Matching")
 
-    # jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
+    jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
     # TEMP COMMENT TO DEBUG, rememeber to remove -ere 9/17/2023
-    # np.save("jMatch", jMatch)
-    # np.save("jmInfo", jmInfo)
+    np.save("jMatch", jMatch, allow_pickle=True)
+    np.save("jmInfo", jmInfo, allow_pickle=True)
 
     # print(jMatch)
     # print(jmInfo)
@@ -113,23 +115,37 @@ def main():
     jMatch = np.load("jMatch.npy", allow_pickle=True)
     jmInfo = np.load("jmInfo.npy", allow_pickle=True)
 
-# # TODO: all code below this point is unimplemented -ere
-
     # Evaluate
     # X1 = pMatch2perm(pMatch); % pairwise matching result
+    # import pdb; pdb.set_trace();
+
     X1 = pMatch2perm(pMatch) # pairwise matching result
-    import pdb; pdb.set_trace();
+
+    # import pdb; pdb.set_trace();
 
     # X2 = pMatch2perm(jMatch); % joint matching result
     X2 = pMatch2perm(jMatch) # joint matching result
 
+    # import pdb; pdb.set_trace();
+
+    # mat1 = scipy.io.loadmat("X1.mat")
+    # X1_mat = csr_matrix(np.array(mat1['X1']).sum()).toarray()
+    mat2 = scipy.io.loadmat("X2.mat")
+    X2_mat = csr_matrix(np.array(mat2['X2']).sum()).toarray()
+
+    import pdb; pdb.set_trace();
+
     # n_img = length(imgList);
     numImages = len(imgList)
-
     # n_pts = length(X1)/n_img;
     numPoints = X1.shape[0]/numImages
 
     # X0 = sparse(repmat(eye(ceil(n_pts)),n_img,n_img)); %groundtruth
+    X0 = csr_matrix(np.tile(np.eye(int(np.ceil(numPoints))), (numImages, numImages)))
+    # mat1 = scipy.io.loadmat("X0.mat")
+    # X1_mat = csr_matrix(np.array(mat1['X0']).sum())
+    # import pdb; pdb.set_trace();
+
 
     # % evaluate [overlap, precision, recall]
     # [o1,p1,r1] = evalMMatch(X1,X0);
@@ -138,6 +154,7 @@ def main():
     # [o2,p2,r2] = evalMMatch(X2,X0);
     o2, p2, r2 = evalMMatch(X2, X0)
 
+    import pdb; pdb.set_trace();
 
     # Visualize
     # if showmatch

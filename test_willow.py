@@ -107,7 +107,18 @@ def main():
     # print(jMatch)
     # print(jmInfo)
     # print(tInfo)
-    # import pdb; pdb.set_trace(); # 6/20/23 start here, compare with matlab
+
+    # TODO: compare with matlab
+    matlab = scipy.io.loadmat("matlab_outputs.mat")
+    pMatch_mat = np.array(matlab['pMatch'])
+    C_mat = np.array(matlab['C'])
+    jMatch_mat = np.array(matlab['jMatch'])
+    jmInfo_mat = np.array(matlab['jmInfo'])
+    X1_mat = csr_matrix(np.array(matlab['X1']).sum()) # can add .toarray() to convert to numpy
+    X2_mat = csr_matrix(np.array(matlab['X2']).sum())
+    X0_mat = csr_matrix(np.array(matlab['X0']).sum())
+
+    # import pdb; pdb.set_trace();
 
     # print("Exiting after Multi Object Matching in test_willow")
     # exit()
@@ -130,8 +141,8 @@ def main():
 
     # mat1 = scipy.io.loadmat("X1.mat")
     # X1_mat = csr_matrix(np.array(mat1['X1']).sum()).toarray()
-    mat2 = scipy.io.loadmat("X2.mat")
-    X2_mat = csr_matrix(np.array(mat2['X2']).sum()).toarray()
+    # mat2 = scipy.io.loadmat("X2.mat")
+    # X2_mat = csr_matrix(np.array(mat2['X2']).sum()).toarray()
 
     import pdb; pdb.set_trace();
 
@@ -144,7 +155,8 @@ def main():
     X0 = csr_matrix(np.tile(np.eye(int(np.ceil(numPoints))), (numImages, numImages)))
     # mat1 = scipy.io.loadmat("X0.mat")
     # X1_mat = csr_matrix(np.array(mat1['X0']).sum())
-    # import pdb; pdb.set_trace();
+
+    import pdb; pdb.set_trace();
 
 
     # % evaluate [overlap, precision, recall]
@@ -156,6 +168,7 @@ def main():
 
     import pdb; pdb.set_trace();
 
+    # TODO
     # Visualize
     # if showmatch
     #     %view pairwise matches

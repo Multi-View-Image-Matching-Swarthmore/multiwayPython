@@ -144,19 +144,33 @@ def main():
     # mat2 = scipy.io.loadmat("X2.mat")
     # X2_mat = csr_matrix(np.array(mat2['X2']).sum()).toarray()
 
-    import pdb; pdb.set_trace();
+    # import pdb; pdb.set_trace();
 
     # n_img = length(imgList);
     numImages = len(imgList)
     # n_pts = length(X1)/n_img;
     numPoints = X1.shape[0]/numImages
 
+    tcount, jcount = 0, 0
+    for i in range(jMatch.shape[0]):
+        for j in range(jMatch.shape[1]):
+            if jMatch[i,j] != None:
+                tcount += 1
+                diff_val = jMatch[i,j].matchInfo+1 - jMatch_mat[i,j][0].item()
+                if not np.isclose(0, np.linalg.norm(diff_val)):
+                    print(f"jMatch {i} {j} differ: ")
+                    print(diff_val)
+                    print(jMatch[i,j].matchInfo+1)
+                    print(jMatch_mat[i,j][0].item()[0])
+                    jcount += 1
+    print(f"Num different: {jcount}/{tcount}")
+
     # X0 = sparse(repmat(eye(ceil(n_pts)),n_img,n_img)); %groundtruth
     X0 = csr_matrix(np.tile(np.eye(int(np.ceil(numPoints))), (numImages, numImages)))
     # mat1 = scipy.io.loadmat("X0.mat")
     # X1_mat = csr_matrix(np.array(mat1['X0']).sum())
 
-    import pdb; pdb.set_trace();
+    # import pdb; pdb.set_trace();
 
 
     # % evaluate [overlap, precision, recall]

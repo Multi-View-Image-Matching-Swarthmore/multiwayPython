@@ -39,6 +39,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     nMatches = 0
 
+    # import pdb; pdb.set_trace();
+
     # unpack pMatch numpy array
     for i in range(pMatch.shape[0]):
         for j in range(i+ 1, pMatch.shape[1]):
@@ -108,6 +110,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     # original scores
     lastIndex = int(cumulativeIndex[cumulativeIndex.shape[0] - 1])
+    
+    # import pdb; pdb.set_trace();
 
     M = csr_matrix((score, (ind1, ind2)), shape=(lastIndex, lastIndex)) #start her next time
 
@@ -152,6 +156,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     # output/save files?
     jMatch = np.empty((pDim, pDim), dtype=pairwiseMatches)
+    # import pdb; pdb.set_trace();
 
     for i in range(pDim): # check
         for j in range(i+1, pDim):
@@ -167,13 +172,15 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
             # print(rowStart, rowStop)
             # print(colStart, colStop)
 
-            subMatrix = M_out[rowStart:rowStop, colStart:colStop]
-            ind1, ind2 = np.nonzero(subMatrix)
+            subMatrix = M_out[rowStart:rowStop, colStart:colStop].T # transpose, since matlab looks for nonzero elements in column major order first
+            ind2, ind1 = np.nonzero(subMatrix) # ??
 
             # print(ind1.shape)
             # print(ind1)
 
             # exit()
+
+            # import pdb; pdb.set_trace();
 
             # if ind1 is not empty aka has nonzero elements
             # if matrix has nonzero elements
@@ -192,7 +199,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
                 # X = greedyMatch([ind1';ind2'],Xraw);
                 # def greedyMatch(match, score, nMax=np.inf):
                 # import pdb; pdb.set_trace();
-                arr = np.vstack((ind2, ind1))
+                arr = np.vstack((ind1, ind2))
                 # import pdb; pdb.set_trace();
                 X = greedyMatch(arr, Xraw) # needs a bit more debugging
 
@@ -215,6 +222,10 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     # jmInfo.filename = filename;
     # jmInfo.time = timeInfo.time;
     # jmInfo.Z = Z;
+
+    # import pdb; pdb.set_trace();
+
+    
     jmInfo = jointMatchInfo(eigV, cumulativeIndex, filename, tInfo, Z)
 
     # print("end")

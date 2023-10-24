@@ -20,6 +20,8 @@ def pMatch2perm(pMatch):
     filename = np.zeros((nFeature.shape[0],), dtype=object)
     emp = 0
 
+    # import pdb; pdb.set_trace();
+
     # for i = 1:size(pMatch,1)
     #     for j = i+1:size(pMatch,2)
     for i in range(pHeight):
@@ -33,7 +35,7 @@ def pMatch2perm(pMatch):
             else:
                 emp += 1
 
-
+    # import pdb; pdb.set_trace();
     # cumIndex = cumsum([0; nFeature]);
     nFeatureWithZero = np.insert(nFeature, 0, 0)
     cumulativeIndex = np.cumsum(nFeatureWithZero).astype(int)
@@ -49,14 +51,16 @@ def pMatch2perm(pMatch):
     # could be optimized?
     M = np.zeros((lastIndex, lastIndex))
 
+    # import pdb; pdb.set_trace();
+
     for i in range(pHeight):
-        for j in range(pWidth):
+        for j in range(i+1, pWidth):
             if pMatch[i][j] is not None:
                 # import pdb; pdb.set_trace();
-                matchList = pMatch[i][j].matchInfo.astype(int) # (100,2) or (2,10)
+                matchList = pMatch[i][j].matchInfo # (100,2) or (2,10)
                 # correct so it is always (N, 2), bigger dimension first
                 if matchList.shape[1] > matchList.shape[0]:
-                    matchList = matchList.reshape((matchList.shape[1], -1))
+                    matchList = matchList.T
                 startrow = cumulativeIndex[i]
                 stoprow = cumulativeIndex[i+1]
                 startcol = cumulativeIndex[j]
@@ -70,6 +74,7 @@ def pMatch2perm(pMatch):
     M.eliminate_zeros()
 
     M = M + M.T
+    # import pdb; pdb.set_trace();
 
     return M
 
@@ -112,6 +117,6 @@ def evalMMatch(X,Xgt):
     # recall = nnz(s1&s2)/(nnz(s2)+eps);
     recall = calcMatch(s1ANDs2, s2nnz)
 
-    import pdb; pdb.set_trace();
+    # import pdb; pdb.set_trace();
 
     return overlap, precision, recall

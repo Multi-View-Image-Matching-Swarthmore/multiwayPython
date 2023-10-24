@@ -99,10 +99,10 @@ def main():
     #   'als': MatchALS, [Multi-Image Matching via Fast Alternating Minimization, CVPR 2015]
     print("Multi Object Matching")
 
-    jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
+    # jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
     # TEMP COMMENT TO DEBUG, rememeber to remove -ere 9/17/2023
-    np.save("jMatch", jMatch, allow_pickle=True)
-    np.save("jmInfo", jmInfo, allow_pickle=True)
+    # np.save("jMatch", jMatch, allow_pickle=True)
+    # np.save("jmInfo", jmInfo, allow_pickle=True)
 
     # print(jMatch)
     # print(jmInfo)
@@ -126,18 +126,23 @@ def main():
     jMatch = np.load("jMatch.npy", allow_pickle=True)
     jmInfo = np.load("jmInfo.npy", allow_pickle=True)
 
+    checkMatlabJMatch(jMatch, jMatch_mat)
+    # import pdb; pdb.set_trace();
+
     # Evaluate
     # X1 = pMatch2perm(pMatch); % pairwise matching result
     # import pdb; pdb.set_trace();
 
     X1 = pMatch2perm(pMatch) # pairwise matching result
-
+    checkMatlab(X1, X1_mat)
     # import pdb; pdb.set_trace();
 
     # X2 = pMatch2perm(jMatch); % joint matching result
     X2 = pMatch2perm(jMatch) # joint matching result
-
+    checkMatlab(X2, X2_mat)
     # import pdb; pdb.set_trace();
+
+    
 
     # mat1 = scipy.io.loadmat("X1.mat")
     # X1_mat = csr_matrix(np.array(mat1['X1']).sum()).toarray()
@@ -151,26 +156,12 @@ def main():
     # n_pts = length(X1)/n_img;
     numPoints = X1.shape[0]/numImages
 
-    tcount, jcount = 0, 0
-    for i in range(jMatch.shape[0]):
-        for j in range(jMatch.shape[1]):
-            if jMatch[i,j] != None:
-                tcount += 1
-                diff_val = jMatch[i,j].matchInfo+1 - jMatch_mat[i,j][0].item()
-                if not np.isclose(0, np.linalg.norm(diff_val)):
-                    print(f"jMatch {i} {j} differ: ")
-                    print(diff_val)
-                    print(jMatch[i,j].matchInfo+1)
-                    print(jMatch_mat[i,j][0].item()[0])
-                    jcount += 1
-    print(f"Num different: {jcount}/{tcount}")
-
     # X0 = sparse(repmat(eye(ceil(n_pts)),n_img,n_img)); %groundtruth
     X0 = csr_matrix(np.tile(np.eye(int(np.ceil(numPoints))), (numImages, numImages)))
     # mat1 = scipy.io.loadmat("X0.mat")
     # X1_mat = csr_matrix(np.array(mat1['X0']).sum())
 
-    # import pdb; pdb.set_trace();
+    # import pdb; pdb.set_trace();s
 
 
     # % evaluate [overlap, precision, recall]
@@ -200,6 +191,36 @@ def main():
     #         end
     #     end
     # end
+
+def checkMatlabJMatch(py, matlab):
+    tcount, jcount = 0, 0
+    for i in range(py.shape[0]):
+        for j in range(py.shape[1]):
+            if py[i,j] != None:
+                tcount += 1
+                diff_val = py[i,j].matchInfo+1 - matlab[i,j][0].item()
+                if not np.isclose(0, np.linalg.norm(diff_val)):
+                    print(f"jMatch {i} {j} differ: ")
+                    print(diff_val)
+                    print(py[i,j].matchInfo+1)
+                    print(matlab[i,j][0].item()[0])
+                    jcount += 1
+    print(f"Num different: {jcount}/{tcount}")
+
+def checkMatlab(py, matlab):
+    tcount, jcount = 0, 0
+    for i in range(py.shape[0]):
+        for j in range(py.shape[1]):
+            if py[i,j] != None:
+                tcount += 1
+                diff_val = py[i,j] - matlab[i,j]
+                if not np.isclose(0, np.linalg.norm(diff_val)):
+                    # print(f"jMatch {i} {j} differ: ")
+                    # print(diff_val)
+                    # print(py[i,j].matchInfo+1)
+                    # print(matlab[i,j][0].item()[0])
+                    jcount += 1
+    print(f"Num different: {jcount}/{tcount}")
 
 if __name__ == '__main__':
     main()

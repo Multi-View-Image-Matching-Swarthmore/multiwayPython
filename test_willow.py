@@ -12,6 +12,7 @@ from scipy.sparse import csr_matrix
 
 # all the image classes
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
+showmatch = True
 
 def main():
     # Load Data
@@ -99,10 +100,10 @@ def main():
     #   'als': MatchALS, [Multi-Image Matching via Fast Alternating Minimization, CVPR 2015]
     print("Multi Object Matching")
 
-    # jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
+    jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method='pg',univsize=10,rank=3,l=1)
     # TEMP COMMENT TO DEBUG, rememeber to remove -ere 9/17/2023
-    # np.save("jMatch", jMatch, allow_pickle=True)
-    # np.save("jmInfo", jmInfo, allow_pickle=True)
+    np.save("jMatch", jMatch, allow_pickle=True)
+    np.save("jmInfo", jmInfo, allow_pickle=True)
 
     # print(jMatch)
     # print(jmInfo)
@@ -126,6 +127,7 @@ def main():
     jMatch = np.load("jMatch.npy", allow_pickle=True)
     jmInfo = np.load("jmInfo.npy", allow_pickle=True)
 
+    print("Checking jMatch...")
     checkMatlabJMatch(jMatch, jMatch_mat)
     # import pdb; pdb.set_trace();
 
@@ -134,11 +136,13 @@ def main():
     # import pdb; pdb.set_trace();
 
     X1 = pMatch2perm(pMatch) # pairwise matching result
+    print("Checking X1...")
     checkMatlab(X1, X1_mat)
     # import pdb; pdb.set_trace();
 
     # X2 = pMatch2perm(jMatch); % joint matching result
     X2 = pMatch2perm(jMatch) # joint matching result
+    print("Checking X2...")
     checkMatlab(X2, X2_mat)
     # import pdb; pdb.set_trace();
 
@@ -171,10 +175,20 @@ def main():
     # [o2,p2,r2] = evalMMatch(X2,X0);
     o2, p2, r2 = evalMMatch(X2, X0)
 
-    import pdb; pdb.set_trace();
+    # import pdb; pdb.set_trace();
 
-    # TODO
-    # Visualize
+    print("Overlap, Precision Recall")
+    print(f"X1: {o1}, {p1}, {r1}")
+    print(f"X2: {o2}, {p2}, {r2}")
+
+    print("Finished!")
+
+    # TODO: Visualize results -> how?
+    # if showmatch:
+    #     for i in range(pMatch.shape[0]):
+    #         for j in range(i + 1, pMatch.shape[1]):
+    #             if not pMatch[i,j].X is None:
+
     # if showmatch
     #     %view pairwise matches
     #     for i = 1:size(pMatch,1)

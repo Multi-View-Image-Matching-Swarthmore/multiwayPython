@@ -1,79 +1,122 @@
 import numpy as np
 
 from classes import pairwiseMatches, jointMatchInfo
+from scipy.sparse import csr_matrix
+import scipy
+
+# debugging function
+def debugNorm(A):
+    return np.linalg.norm(A, ord=2)
 
 
 def pMatch2perm(pMatch):
-
     pHeight = pMatch.shape[0]
     pWidth = pMatch.shape[1] # shld be the same
 
-    # nFeature = zeros(size(pMatch,1),1);
-    nFeature = np.zeros(pHeight, 1)
+    nFeature = np.zeros((pHeight, 1))
+
 
     # filename = cell(size(pMatch,1),1);
-    filename = None # # TODO:
+    filename = np.zeros((nFeature.shape[0],), dtype=object)
+    emp = 0
+
+    # import pdb; pdb.set_trace();
 
     # for i = 1:size(pMatch,1)
     #     for j = i+1:size(pMatch,2)
     for i in range(pHeight):
         for j in range(i+1, pWidth):
-            # if ~isempty(pMatch(i,j).nFeature)
-    #             nFeature(i) = pMatch(i,j).nFeature(1);
-    #             nFeature(j) = pMatch(i,j).nFeature(2);
-    #         end
-    #         if ~isempty(pMatch(i,j).filename)
-    #             filename(i) = pMatch(i,j).filename(1);
-    #             filename(j) = pMatch(i,j).filename(2);
-            if pMatch[i][j].nFeature == 0:
-                print("nFeature is empty for:", i, j)
-                exit()
-            if len(pMatch[i][j].filename) == 0:
-                print("filename is empty for:", i, j)
-                exit()
+            if pMatch[i][j] is not None:
+                nFeature[i][0] = pMatch[i][j].nFeature[0]
+                nFeature[j][0] = pMatch[i][j].nFeature[1]
+                filename[i] = pMatch[i][j].filename[0]
+                filename[j] = pMatch[i][j].filename[1]
+                # import pdb; pdb.set_trace();
+            else:
+                emp += 1
 
-            nFeature[i] = pMatch[i][j].nFeature
-            nFeature[j] = pMatch[i][j].nFeature # check
-            filename[i] = pMatch[i][j].filename[0]
-            filename[j] = pMatch[i][j].filename[1]
-
-
+    # import pdb; pdb.set_trace();
     # cumIndex = cumsum([0; nFeature]);
     nFeatureWithZero = np.insert(nFeature, 0, 0)
     cumulativeIndex = np.cumsum(nFeatureWithZero).astype(int)
 
     lastIndex = int(cumulativeIndex[cumulativeIndex.shape[0] - 1])
 
-    ## TODO:
+    # import pdb; pdb.set_trace();
+
     # M = sparse(cumIndex(end),cumIndex(end));
     # M = csr_matrix((score, (ind1, ind2)), shape=(lastIndex, lastIndex))
 
-    # for i = 1:size(pMatch,1)
-    #     for j = i+1:size(pMatch,2)
-    #         if ~isempty(pMatch(i,j).matchInfo)
-    #             matchList = double(pMatch(i,j).matchInfo.match);
-    #             M(cumIndex(i)+1:cumIndex(i+1),cumIndex(j)+1:cumIndex(j+1)) = ...
-    #                 sparse(matchList(1,:),matchList(2,:),pMatch(i,j).X,nFeature(i),nFeature(j));
-    #         end
-    #     end
-    # end
-    # M = M + M';
+    # M = csr_matrix((lastIndex, lastIndex)) # should be 400
+    # could be optimized?
+    M = np.zeros((lastIndex, lastIndex))
+
+    # import pdb; pdb.set_trace();
+
+    for i in range(pHeight):
+        for j in range(i+1, pWidth):
+            if pMatch[i][j] is not None:
+                # import pdb; pdb.set_trace();
+                matchList = pMatch[i][j].matchInfo # (100,2) or (2,10)
+                # correct so it is always (N, 2), bigger dimension first
+                if matchList.shape[1] > matchList.shape[0]:
+                    matchList = matchList.T
+                startrow = cumulativeIndex[i]
+                stoprow = cumulativeIndex[i+1]
+                startcol = cumulativeIndex[j]
+                stopcol = cumulativeIndex[j+1]
+                # import pdb; pdb.set_trace();
+                M[startrow:stoprow,startcol:stopcol] = csr_matrix((pMatch[i][j].X.reshape((-1,)), (matchList[:, 0], matchList[:, 1])), shape=(int(nFeature[i][0]), int(nFeature[j][0]))).toarray()
+                
+
+    # M = csr_matrix((pMatch[i][j].X.reshape((-1,)), (pMatch[i][j].matchInfo[:, 0], pMatch[i][j].matchInfo[:, 1])), shape=(int(nFeature[i]), int(nFeature[j])))
+    M = csr_matrix(M)
+    M.eliminate_zeros()
+
+    M = M + M.T
+    # import pdb; pdb.set_trace();
 
     return M
 
+def calcMatch(a, b):
+    eps = np.finfo(np.float64).eps
+    num = a
+    den = b
+
+    # import pdb; pdb.set_trace();
+
+    return (num/den) + eps
+
 def evalMMatch(X,Xgt):
-    overlap, precision, recall = None, None, None
     # X = X > 0;
+    # import pdb; pdb.set_trace();
+    X = X.toarray()
+    X = X > 0
     # Xgt = Xgt > 0;
+    Xgt = Xgt.toarray()
+    Xgt = Xgt > 0
 
     # s1 = triu(X,1);
-    # upper triangle matrix: https://www.mathworks.com/help/matlab/ref/triu.html
+    s1 = np.triu(X, 1)
     # s2 = triu(Xgt,1);
+    s2 = np.triu(Xgt, 1)
 
-    # is there a built in library for this?
+    # mat2 = scipy.io.loadmat("X2.mat")
+    # X_mat = csr_matrix(np.array(mat2['X']).sum()).toarray()
+    # import pdb; pdb.set_trace();
+
+    s1nnz = np.count_nonzero(s1)
+    s2nnz = np.count_nonzero(s2)
+    s1ANDs2 = np.count_nonzero(np.bitwise_and(s1, s2))
+    s1ORs2 = np.count_nonzero(np.bitwise_or(s1, s2))
+
     # overlap = nnz(s1&s2)/(nnz(s1|s2)+eps);
+    overlap = calcMatch(s1ANDs2, s1ORs2)
     # precision = nnz(s1&s2)/(nnz(s1)+eps);
+    precision = calcMatch(s1ANDs2, s1nnz)
     # recall = nnz(s1&s2)/(nnz(s2)+eps);
-    # nnz - number of nonzero matrix elements: https://www.mathworks.com/help/matlab/ref/nnz.html
+    recall = calcMatch(s1ANDs2, s2nnz)
+
+    # import pdb; pdb.set_trace();
 
     return overlap, precision, recall

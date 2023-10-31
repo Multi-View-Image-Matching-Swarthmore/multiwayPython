@@ -34,10 +34,12 @@ Outputs:
 def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     nFeature = np.zeros((pMatch.shape[0], 1))
     # print(nFeature.shape)
-    filename = np.empty((nFeature.shape), dtype=str)
+    filename = np.zeros((nFeature.shape[0],), dtype=object)
     # print(filename.shape)
 
     nMatches = 0
+
+    # import pdb; pdb.set_trace();
 
     # unpack pMatch numpy array
     for i in range(pMatch.shape[0]):
@@ -53,13 +55,18 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
                 print("filename is empty for:", i, j)
                 exit()
 
+            # import pdb; pdb.set_trace();
+
             nMatches += np.sum(pMatch[i][j].X)
-            nFeature[i] = pMatch[i][j].nFeature
-            nFeature[j] = pMatch[i][j].nFeature
+            nFeature[i] = pMatch[i][j].nFeature[0]
+            nFeature[j] = pMatch[i][j].nFeature[1]
             filename[i] = pMatch[i][j].filename[0]
             filename[j] = pMatch[i][j].filename[1]
+            # import pdb; pdb.set_trace();
 
     # print(nFeature.shape)
+
+    # import pdb; pdb.set_trace();
 
 
     # initilize variables to run joint matching
@@ -103,6 +110,8 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
 
     # original scores
     lastIndex = int(cumulativeIndex[cumulativeIndex.shape[0] - 1])
+    
+    # import pdb; pdb.set_trace();
 
     M = csr_matrix((score, (ind1, ind2)), shape=(lastIndex, lastIndex)) #start her next time
 
@@ -123,7 +132,6 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     Z = []
     print("Running joint match, problem size = (" + str(vM.shape[0]) + "," + str(Size) + ")")
 
-    method = "pg" # debugging line, shoudl eventually remove -ere
     # import pdb; pdb.set_trace();
 
     if method == "spectral":
@@ -135,38 +143,46 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     elif method == "als":
         print("MatchALS...")
         M_out, eigV, tInfo, iter = matchALS(vM, nFeature, Size)
-        exit()
-    elif method == "pg": #todo
+        # exit()
+    elif method == "pg":
+        print("Proposed Method Matching...")
         M_out, eigV, tInfo, Z = proposedMethod(vM, C, nFeature, Size)
         # print("pg (proposed method) not implemented! Sorry!")
-        exit()
+        # print("here !")
+        # exit()
     else:
         print("Unkown Multi-Object Matching method:", method)
         exit()
 
+    # import pdb; pdb.set_trace();
+
     # output/save files?
     jMatch = np.empty((pDim, pDim), dtype=pairwiseMatches)
+    # import pdb; pdb.set_trace();
 
     for i in range(pDim): # check
         for j in range(i+1, pDim):
-            print()
+            # print()
             # [ind1,ind2] = find(   M_out( csum(i)+1:csum(i+1) , csum(j)+1:csum(j+1) )   );
             # return row, col of the nonzero elements indices
-            rowStart = cumulativeIndex[i] + 1
+            # matlab 1 indexed
+            rowStart = cumulativeIndex[i] + 1 - 1
             rowStop = cumulativeIndex[i+1]
-            colStart = cumulativeIndex[j] + 1
+            colStart = cumulativeIndex[j] + 1 - 1
             colStop = cumulativeIndex[j+1]
 
             # print(rowStart, rowStop)
             # print(colStart, colStop)
 
-            subMatrix = M_out[rowStart:rowStop, colStart:colStop]
-            ind1, ind2 = np.nonzero(subMatrix)
+            subMatrix = M_out[rowStart:rowStop, colStart:colStop].T # transpose, since matlab looks for nonzero elements in column major order first
+            ind2, ind1 = np.nonzero(subMatrix) # ??
 
             # print(ind1.shape)
             # print(ind1)
 
             # exit()
+
+            # import pdb; pdb.set_trace();
 
             # if ind1 is not empty aka has nonzero elements
             # if matrix has nonzero elements
@@ -175,38 +191,49 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
                 # Xraw = vM(csum(i)+1:csum(i+1),csum(j)+1:csum(j+1));
                 Xraw = vM[rowStart:rowStop, colStart:colStop]
 
+                # import pdb; pdb.set_trace();
+
                 # # TODO: help
                 # Xraw = Xraw(sub2ind(size(Xraw),ind1,ind2));
                 # https://stackoverflow.com/questions/15230179/how-to-get-the-linear-index-for-a-numpy-array-sub2ind
-                Xraw = Xraw
+                Xraw = np.asarray(Xraw[ind1, ind2])[0]
 
                 # X = greedyMatch([ind1';ind2'],Xraw);
                 # def greedyMatch(match, score, nMax=np.inf):
-                arr = np.concatenate(ind1.T, ind2.T, axis=1) # double check axis?
-                X = greedyMatch(arr, Xraw)
+                # import pdb; pdb.set_trace();
+                arr = np.vstack((ind1, ind2))
+                # import pdb; pdb.set_trace();
+                X = greedyMatch(arr, Xraw) # needs a bit more debugging
 
                 # store results
                 # jMatch(i,j).matchInfo.match = [ind1';ind2'];
                 # jMatch(i,j).X = X;
                 # jMatch(i,j).Xraw = Xraw;
                 # jMatch(i,j).filename = [filename(i),filename(j)];
-                f = np.array([filename[i], filename[j]])
+                f = np.array([filename[i], filename[j]]) # filename is empty oof
 
                 # jMatch(i,j).nFeature = [nFeature(i),nFeature(j)];
                 nf = np.array([nFeature[i], nFeature[j]])
 
                 jMatch[i][j] = pairwiseMatches(arr, nf, Xraw, X)
                 jMatch[i][j].filename = f
+                # import pdb; pdb.set_trace();
 
     # jmInfo.eigV = eigV;
     # jmInfo.nFeature = csum;
     # jmInfo.filename = filename;
     # jmInfo.time = timeInfo.time;
     # jmInfo.Z = Z;
+
+    # import pdb; pdb.set_trace();
+
+    
     jmInfo = jointMatchInfo(eigV, cumulativeIndex, filename, tInfo, Z)
 
     # print("end")
     # exit()
+
+    # import pdb; pdb.set_trace();
 
     return jMatch,jmInfo,tInfo
 
@@ -242,7 +269,7 @@ def assignmentoptimalpy(distMatrix):
     # import pdb; pdb.set_trace();
     # load the shared library into ctypes
     libname = pathlib.Path.cwd() / "utils" / "assignmentoptimal.so"
-    print(libname)
+    # print(libname)
     c_lib = ctypes.CDLL(libname)
 
     height, width = distMatrix.shape
@@ -258,36 +285,10 @@ def assignmentoptimalpy(distMatrix):
     # void assignmentoptimal(double *assignment, double *cost, double *distMatrixIn, int nOfRows, int nOfColumns)
     c_lib.assignmentoptimalwrapper(assignment.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), ctypes.addressof(ctypes.c_double(cost)), distMatrix2.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), int(height), int(width))
 
-    print(assignment)
-    print("Made it here!")
+    # (assignment)
+    # print("Made it here!")
     exit()
     return None
-    # # save original distMatrix for cost computation
-    # originalDistMatrix = distMatrix # should be 10x10 numpy
-
-    # # check for negative elements
-    # if distMatrix.any() < 0:
-    #     print("Errpr: All matrix elements have to be non-negative.")
-    #     exit()
-    
-    # # get matrix dimensions
-    # height, width = distMatrix.shape
-    # totalSize = height * width
-    # assignment = np.zeros((height, 1))
-    # cost = 0
-    
-    # # check for infinite values, change inifinity to large finite value
-    # infiniteIndex = np.isinf(distMatrix).nonzero().astype(int) # gets all indices that have +/- infinity
-    # if infiniteIndex.shape[0] >= totalSize:
-    #     # all elements are infinite
-    #     return assignment, cost
-    # distMatrix[infiniteIndex] = -1 # set all inifinity values to -1 temporarily
-    # maxValue = max(10, 10 * np.amax(distMatrix) * height * width) # make large finite value
-    # distMatrix[infiniteIndex] = maxValue # set infinity values to large finite value
-
-    # import pdb; pdb.set_trace();
-
-    # return None
 
 
 '''
@@ -305,7 +306,7 @@ Outputs:
 - X:
 '''
 def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
-    print("getting new X...")
+    # print("getting new X...")
     # geometric constraint
     n = len(nFeature) - 1
     M = np.zeros((2*n, X.shape[1]))
@@ -315,31 +316,34 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
     # update Z
     # import pdb; pdb.set_trace()
     U, S, V = np.linalg.svd(M, full_matrices=False) # econ setting (dont worry about it)
-    # DEBUGGING HERE
     # import pdb; pdb.set_trace()
     S = np.diag(S)
     Z = U[:,:S.shape[0]]@S[:,:rank]@V[:rank,:] 
 
     # update X
     for i in range(n):
+        # print(i)
         ind1 = getInds(nFeature, i)
+        ind1_length = ind1.shape[0]
         Ci = C[:,ind1]
         Zi = Z[2*i:2*i+2, :]
         Yi = Y[ind1,:]
-        # hungarian <- wtf is this -ere
-        # pdist2 Matlab -> cdist Scipy?
-        # https://stackoverflow.com/questions/43650931/python-alternative-for-calculating-pairwise-distance-between-two-sets-of-2d-poin
+        # hungarian
         D = var_lambda*cdist(Ci.T,Zi.T, "euclidean") # still issues
         distMatrix = D - rho*Yi - np.min(D - rho*Yi)
-        assignment = assignmentoptimalpy(distMatrix.astype(np.float64)) # todo implement assignmentoptimal
+        # assignment = assignmentoptimalpy(distMatrix.astype(np.float64)) # todo implement assignmentoptimal
+        # just import it from Matlab
+        aofilename = "ao" + str(i+1) + ".mat"
+        aoFilenameFull = pathlib.Path.cwd() / "assignmentoptimals" / aofilename
+        mat = scipy.io.loadmat(aoFilenameFull)
+        assignment = np.array(mat['assignment']).reshape(1,-1)[0]
+
         Xhi = np.zeros((ind1_length, K))
-        q = np.find(assignment >= 1) # check?
-        indices = q*len(Xhi[0]) + assignment[q] # check equiv to sub2ind Matlab
-        # https://stackoverflow.com/questions/28995146/matlab-ind2sub-equivalent-in-python
-        Xhi[indices] = 1
+        # print(Xhi.shape)
+        q = np.where(assignment >= 1)[0]
+        Xhi[q, assignment[q]-1] = 1 # Matlab is 1 indexed
         X[ind1,:] = Xhi
-        import pdb; pdb.set_trace()
-        return X
+    return X, M
 '''
 initial_Y function
 Inputs:
@@ -348,7 +352,7 @@ Outputs:
 - Y
 '''
 def initial_Y(Y0, W, nFeature):
-    print("initialize Y...")
+    # print("initialize Y...")
     # import pdb; pdb.set_trace();
     tol = 1e-4
     maxIter = 500
@@ -533,15 +537,14 @@ Outputs:
 - X: mapping from image features to selected feature space, m*k
 - M: coordinates of selected features
 '''
-def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
-    print("In Proposed Method function.")
-    print("Inputs: nFeature=", nFeature[0])
+def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3, verbose=False):
+    # print("In Proposed Method function.")
+    # print("Inputs: nFeature=", nFeature[0])
 
     tol_Y = 1e-4
     var_lambda = 1 # weight of geometric constant, redundant, made as param ????
     maxIter = 500
     maxIter_Y = 500
-    verbose = True
     k = Size
     # import pdb; pdb.set_trace();
     W = vM
@@ -561,14 +564,13 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
 
     start = time.time()
 
-    #todo implement initial_Y method
     if os.path.exists("Y.npy"):
         Y = np.load("Y.npy")
     else:
         Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
         np.save("Y.npy", Y)
 
-    print(Y.shape)
+    # print(Y.shape)
     # import pdb; pdb.set_trace()
 
     # initialize X
@@ -577,50 +579,65 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
     C_norm_factor = (np.std(C[0,:]) + np.std(C[1,:])) / 2.0
     C_norm = C / C_norm_factor
     # import pdb; pdb.set_trace()
-    X = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda) # start here next time 3/19/23 ere
+
+    # speed up get new X
+    if os.path.exists("X_init.npy"):
+        X = np.load("X_init.npy")
+    else:
+        X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda)
+        np.save("X_init.npy", X)
 
     # update Y X Z
     Rho = [1e0, 1e1, 1e2]
     Iter = 0
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     for i in range(len(Rho)):
         rho = Rho[i]
-        for iter in range(maxIter):
+        for iter1 in range(1, maxIter+1):
+            # print(iter1)
             # update Y
             for iter_Y in range(maxIter_Y):
                 t1_start = time.time()
                 Y0 = Y
-                g = - W*Y + Y*(Y.T * Y) + rho*(Y - X)
-                st = 3*np.linalg.norm(Y.T*Y) + np.linalg.norm(W) + rho
+                # import pdb; pdb.set_trace()
+                g = - W@Y + Y@(Y.T @ Y) + rho*(Y - X)
+                # import pdb; pdb.set_trace()
+                st = 3*np.linalg.norm(Y.T@Y) + scipy.sparse.linalg.norm(W) + rho
                 Y = Y - g/st
                 for i2 in range(nFeature.shape[0] - 1):
                     ind1 = getInds(nFeature, i2)
-                    Y[ind1, ind1] = proj2dpam(Y[ind1,:], 1e-2) # todo implement proj2dpam
+                    # import pdb; pdb.set_trace()
+                    Y[ind1, :] = proj2dpam(Y[ind1,:], 1e-2)
                 t1_stop = time.time()
                 t1 = t1_stop - t1_start
                 RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
 
                 if verbose:
-                    print("Iter = %d, iter_Y  = %d, Res = %e, t = %f\n" % iter, iter_Y, RelChg, t1)
+                    print("Iter = %d, iter_Y  = %d, Res = %e, t = %f\n" % (iter1, iter_Y, RelChg, t1))
 
                 if RelChg < tol_Y:
+                    # import pdb; pdb.set_trace()
                     break
             # update X
             X0 = X
-            X, M = get_newX(Y, X, C_norm, rho, k, rank, nFeature, var_lambda) # todo implement get_newX
+            X, M = get_newX(Y, X, C_norm, rho, k, rank, nFeature, var_lambda)
            
             if np.sum(abs(X - X0)) < 1: # check?
                 break
 
-        Iter = Iter + iter # wtf come back to this
+        Iter = Iter + iter1 # wtf come back to this
+
+    # import pdb; pdb.set_trace()
 
     # overall match
     stop = time.time()
     runtime = stop - start
     iterations = Iter
-    XP = X*X.T
+    XP = X@X.T
 
-    print("Time = %fs, Overall Iter = %d" % runtime, iterations)
+    print("Time = %fs, Overall Iter = %d" % (runtime, iterations))
+
+    # import pdb; pdb.set_trace()
 
     # M_out, eigV, tInfo, Z
     return XP, X, runtime, M
@@ -640,8 +657,8 @@ Outputs
 - A: AA^T = X
 - runtime: runtime
 '''
-def matchALS(W, nFeature, universeSize):
-    print("In Match ALS method")
+def matchALS(W, nFeature, universeSize, verbose=False):
+    # print("Running Match ALS...")
 
     alpha = 20 # was 50
     beta = 0 # 0.1 <-- SP did this
@@ -650,7 +667,6 @@ def matchALS(W, nFeature, universeSize):
     pSelect = 1
     tol = 5e-4
     maxIter = 1000
-    verbose = False
     eigenvalues = False
 
     print("Running MatchALS: alpha=%d, beta=%d, maxRank=%d, pSelect=%d" % (alpha, beta, maxRank, pSelect))
@@ -676,13 +692,13 @@ def matchALS(W, nFeature, universeSize):
     mat = scipy.io.loadmat("A_matrix.mat")
     A = np.array(mat['A'])
 
-    print(A.shape)
+    # print(A.shape)
 
     nFeature = np.cumsum(nFeature)
     nFeature = np.insert(nFeature, 0, 0)
 
-    print(nFeature)
-    print(nFeature.shape)
+    # print(nFeature)
+    # print(nFeature.shape)
 
     start = time.time()
 
@@ -751,7 +767,7 @@ def matchALS(W, nFeature, universeSize):
     runtime = end - start
     iterations = i
 
-    print(iterations)
+    # print(iterations)
 
     if iterations >= maxIter - 1:
         print("Algorithm terminated at max iterations. Time = %e, Iter = %d, Res = (%e,%e), mu = %self.fail('message')" % (runtime, iterations, pRes, dRes, mu))

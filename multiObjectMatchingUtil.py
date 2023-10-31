@@ -143,7 +143,7 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
     elif method == "als":
         print("MatchALS...")
         M_out, eigV, tInfo, iter = matchALS(vM, nFeature, Size)
-        exit()
+        # exit()
     elif method == "pg":
         print("Proposed Method Matching...")
         M_out, eigV, tInfo, Z = proposedMethod(vM, C, nFeature, Size)
@@ -154,13 +154,15 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         print("Unkown Multi-Object Matching method:", method)
         exit()
 
+    # import pdb; pdb.set_trace();
+
     # output/save files?
     jMatch = np.empty((pDim, pDim), dtype=pairwiseMatches)
     # import pdb; pdb.set_trace();
 
     for i in range(pDim): # check
         for j in range(i+1, pDim):
-            print()
+            # print()
             # [ind1,ind2] = find(   M_out( csum(i)+1:csum(i+1) , csum(j)+1:csum(j+1) )   );
             # return row, col of the nonzero elements indices
             # matlab 1 indexed
@@ -267,7 +269,7 @@ def assignmentoptimalpy(distMatrix):
     # import pdb; pdb.set_trace();
     # load the shared library into ctypes
     libname = pathlib.Path.cwd() / "utils" / "assignmentoptimal.so"
-    print(libname)
+    # print(libname)
     c_lib = ctypes.CDLL(libname)
 
     height, width = distMatrix.shape
@@ -283,8 +285,8 @@ def assignmentoptimalpy(distMatrix):
     # void assignmentoptimal(double *assignment, double *cost, double *distMatrixIn, int nOfRows, int nOfColumns)
     c_lib.assignmentoptimalwrapper(assignment.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), ctypes.addressof(ctypes.c_double(cost)), distMatrix2.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), int(height), int(width))
 
-    print(assignment)
-    print("Made it here!")
+    # (assignment)
+    # print("Made it here!")
     exit()
     return None
 
@@ -304,7 +306,7 @@ Outputs:
 - X:
 '''
 def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
-    print("getting new X...")
+    # print("getting new X...")
     # geometric constraint
     n = len(nFeature) - 1
     M = np.zeros((2*n, X.shape[1]))
@@ -350,7 +352,7 @@ Outputs:
 - Y
 '''
 def initial_Y(Y0, W, nFeature):
-    print("initialize Y...")
+    # print("initialize Y...")
     # import pdb; pdb.set_trace();
     tol = 1e-4
     maxIter = 500
@@ -535,15 +537,14 @@ Outputs:
 - X: mapping from image features to selected feature space, m*k
 - M: coordinates of selected features
 '''
-def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
-    print("In Proposed Method function.")
-    print("Inputs: nFeature=", nFeature[0])
+def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3, verbose=False):
+    # print("In Proposed Method function.")
+    # print("Inputs: nFeature=", nFeature[0])
 
     tol_Y = 1e-4
     var_lambda = 1 # weight of geometric constant, redundant, made as param ????
     maxIter = 500
     maxIter_Y = 500
-    verbose = True
     k = Size
     # import pdb; pdb.set_trace();
     W = vM
@@ -569,7 +570,7 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3):
         Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
         np.save("Y.npy", Y)
 
-    print(Y.shape)
+    # print(Y.shape)
     # import pdb; pdb.set_trace()
 
     # initialize X
@@ -656,8 +657,8 @@ Outputs
 - A: AA^T = X
 - runtime: runtime
 '''
-def matchALS(W, nFeature, universeSize):
-    print("In Match ALS method")
+def matchALS(W, nFeature, universeSize, verbose=False):
+    # print("Running Match ALS...")
 
     alpha = 20 # was 50
     beta = 0 # 0.1 <-- SP did this
@@ -666,7 +667,6 @@ def matchALS(W, nFeature, universeSize):
     pSelect = 1
     tol = 5e-4
     maxIter = 1000
-    verbose = False
     eigenvalues = False
 
     print("Running MatchALS: alpha=%d, beta=%d, maxRank=%d, pSelect=%d" % (alpha, beta, maxRank, pSelect))
@@ -692,13 +692,13 @@ def matchALS(W, nFeature, universeSize):
     mat = scipy.io.loadmat("A_matrix.mat")
     A = np.array(mat['A'])
 
-    print(A.shape)
+    # print(A.shape)
 
     nFeature = np.cumsum(nFeature)
     nFeature = np.insert(nFeature, 0, 0)
 
-    print(nFeature)
-    print(nFeature.shape)
+    # print(nFeature)
+    # print(nFeature.shape)
 
     start = time.time()
 
@@ -767,7 +767,7 @@ def matchALS(W, nFeature, universeSize):
     runtime = end - start
     iterations = i
 
-    print(iterations)
+    # print(iterations)
 
     if iterations >= maxIter - 1:
         print("Algorithm terminated at max iterations. Time = %e, Iter = %d, Res = (%e,%e), mu = %self.fail('message')" % (runtime, iterations, pRes, dRes, mu))

@@ -77,7 +77,7 @@ def runGraphMatchBatch(datapath,viewList,pairingMode, pairingParam,wEdge=0):
         print("Invalid pairing mode:", pairingMode)
         exit()
 
-    print(pairs)
+    # print(pairs)
 
     # Create pairMatches array
     pairMatches = np.empty((numImages, numImages), dtype=pairwiseMatches)
@@ -265,7 +265,7 @@ Inputs:
 - score: Xraw, similarity scores, 1D, horizontal
 -(optional)nMax: kinda wack, convergence condition?
 Outputs:
--
+- flag: numpy array of greedy matches, (score.shape[0], 1)
 '''
 # check if works for normal score arrays
 # works for sprase matrices right now

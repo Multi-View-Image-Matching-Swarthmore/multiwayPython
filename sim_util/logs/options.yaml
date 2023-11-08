@@ -1,0 +1,70 @@
+arch: !!python/object:options.ArchParams
+  activ: relu
+  architecture_type: basic
+  layer_lens: &id001
+  - 32
+  - 64
+  normalize_emb: true
+  yamldict:
+    activ: relu
+    architecture_type: basic
+    layer_lens: *id001
+    normalize_emb: true
+architecture: basic0
+batch_size: 32
+checkpoint_start_dir: null
+data_dir: synthetic/synthtest
+dataset: synthtest
+dataset_params: !!python/object:options.DatasetParams
+  data_dir: synthetic/synthtest
+  dataset_type: synth
+  descriptor_dim: 12
+  descriptor_noise_var: 0
+  descriptor_var: 1.0
+  dtype: float32
+  points: &id002
+  - 25
+  sizes: &id003
+    np_test: 10
+    test: 10
+    train: 10
+  views: &id004
+  - 3
+  yamldict:
+    dataset_type: synth
+    descriptor_dim: 12
+    descriptor_noise_var: 0
+    descriptor_var: 1.0
+    dtype: float32
+    points: *id002
+    sizes: *id003
+    views: *id004
+datasets_dir: synthetic
+debug: false
+final_embedding_dim: 25
+geometric_loss: -1
+learning_rate: 0.001
+learning_rate_continuous: false
+learning_rate_decay_epochs: 4
+learning_rate_decay_rate: 0.95
+learning_rate_decay_type: exponential
+log_steps: 5
+loss_type: l2
+min_learning_rate: 1.0e-05
+momentum: 0.6
+num_epochs: -1
+optimizer_type: sgd
+reconstruction_loss: 1.0
+rome16k_dir: ../rome16k/dataset/
+save_dir: logs/
+save_interval_secs: 600
+save_summaries_secs: 120
+shuffle_data: true
+test_freq: -1
+test_freq_steps: -1
+train_time: -1
+use_abs_value: false
+use_clamping: false
+verbose: false
+weight_decay: 4.0e-05
+weight_l1_decay: 0

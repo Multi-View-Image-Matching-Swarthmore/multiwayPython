@@ -5,12 +5,21 @@ from pairwiseMatchingUtil import greedyMatch
 from multiObjectMatchingUtil import runJointMatch
 from evaluationUtil import pMatch2perm, evalMMatch
 from scipy.sparse import csr_matrix
-from sim_util import options
+import pickle
+# from sim_util import options
 
 def test_sim():
 
     # Generate/Load Simulation
     # TODO
+    datasetfile = "sim_util/synthetic/synthtest/synthtest.pkl"
+    with open(datasetfile, 'rb') as fp:
+        sim_data = pickle.load(fp)
+        print("Loaded synthetic data.")
+        # print(sim_data)
+    print(sim_data['adj_mat'])
+
+    exit()
 
     # Pairwise matching
     print("Pairwise Matching")

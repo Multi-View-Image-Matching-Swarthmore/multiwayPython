@@ -1,8 +1,17 @@
-sizes: { 'train': 10, 'test': 10, 'np_test': 10 }
-dataset_type: 'synth'
-views: [3]
-points: [25]
-descriptor_dim: 12
+sizes: { 'train': 10, 'test': 0, 'np_test': 0 }
+dataset_type: 'synthnoise'
+views: [3] # num images?
+points: [10] # num points per image?
+scale: 1 # check
+points_scale: 1 # check
+knn: 50 # check
+sparse: True # check
+soft_edges: False # check
+descriptor_noise_var: 0 # check
+noise_level: 0.1 # check
+subnoise_level: 0.05 #check
+descriptor_dim: 2
 descriptor_var: 1.0
 descriptor_noise_var: 0
+num_repeats: 1 # check
 dtype: 'float32'

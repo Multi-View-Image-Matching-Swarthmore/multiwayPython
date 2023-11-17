@@ -131,7 +131,8 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
     viewMat2 = scipy.io.loadmat(viewPair[1])
     nFeature = [viewMat1['nfeature'][0][0], viewMat2['nfeature'][0][0]]
 
-    # import pdb; pdb.set_trace();
+    if np.sum(nFeature) != 20:
+        import pdb; pdb.set_trace();
 
     if len(matchInfo) == 0: # if match list is empty, exit method
         print("matchInfo list empty")
@@ -172,6 +173,8 @@ def graphMatch(viewPair, methodGM = 'rw', methodDisc = 'greedy', wEdge = 0, wAng
 
     # discretization
     # print("discretization...")
+
+
     if methodDisc == "greedy": # do greedyMatch
         # print(mData.matchInfo)
         X = greedyMatch(matchInfo, Xraw)
@@ -222,6 +225,7 @@ def initMatch(viewPair,kNNInit,nMaxInit,threshScore,threshRatio):
     matchInds = []
     simScores = []
 
+
     # recompute threshold distance (scale to image size?)
     # threshDist = np.max(viewMat2['img'].shape)*threshDist
 
@@ -256,6 +260,8 @@ def initMatch(viewPair,kNNInit,nMaxInit,threshScore,threshRatio):
 
     matchInds = matchInds.astype(np.uint16)
 
+    # import pdb; pdb.set_trace();
+
     return (simScores, matchInds)
 
 '''
@@ -276,7 +282,12 @@ def greedyMatch(match, score, nMax=np.inf):
     # print(match.shape)
     # print(score.shape)
 
-    match = np.transpose(match) # make (10,2)
+    if match.shape[0] < match.shape[1]: # shape should be (N, 2)
+        match = match.T
+    
+    # match = np.transpose(match) # make (10,2) / (2, 100)
+
+    # import pdb; pdb.set_trace();
 
     count = 0
     score = np.copy(score)

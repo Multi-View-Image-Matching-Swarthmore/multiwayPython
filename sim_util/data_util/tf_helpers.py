@@ -29,7 +29,7 @@ class MyFeature(object):
       return { self._key : feat_read }
 
   def _get_feature_read(self):
-    return tf.FixedLenFeature([], self.dtype)
+    return tf.io.FixedLenFeature([], self.dtype)
 
   def tensors_to_item(self, keys_to_tensors):
     tensor = keys_to_tensors[self._key]
@@ -90,7 +90,7 @@ class TensorFeature(MyFeature):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[v]))
 
   def _get_feature_read(self):
-    return tf.FixedLenFeature([], tf.string)
+    return tf.io.FixedLenFeature([], tf.string)
 
   def tensors_to_item(self, keys_to_tensors):
     tensor = keys_to_tensors[self._key]

@@ -16,6 +16,8 @@ from classes import pairwiseMatches, jointMatchInfo
 import ctypes
 import pathlib
 
+from munkres import Munkres
+
 '''
 Run Joint matching
 Inputs:
@@ -320,6 +322,8 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
     S = np.diag(S)
     Z = U[:,:S.shape[0]]@S[:,:rank]@V[:rank,:] 
 
+    munkres_algo = Munkres()
+
     # update X
     for i in range(n):
         # print(i)
@@ -333,10 +337,13 @@ def get_newX(Y, X, C, rho, K, rank, nFeature, var_lambda):
         distMatrix = D - rho*Yi - np.min(D - rho*Yi)
         # assignment = assignmentoptimalpy(distMatrix.astype(np.float64)) # todo implement assignmentoptimal
         # just import it from Matlab
-        aofilename = "ao" + str(i+1) + ".mat"
-        aoFilenameFull = pathlib.Path.cwd() / "assignmentoptimals" / aofilename
-        mat = scipy.io.loadmat(aoFilenameFull)
-        assignment = np.array(mat['assignment']).reshape(1,-1)[0]
+        # aofilename = "ao" + str(i+1) + ".mat"
+        # aoFilenameFull = pathlib.Path.cwd() / "assignmentoptimals" / aofilename
+        # mat = scipy.io.loadmat(aoFilenameFull)
+        # assignment = np.array(mat['assignment']).reshape(1,-1)[0]
+
+        # import pdb; pdb.set_trace()
+        assignment = np.array(munkres_algo.compute(distMatrix.astype(np.float64)))[:, 1]
 
         Xhi = np.zeros((ind1_length, K))
         # print(Xhi.shape)
@@ -360,7 +367,8 @@ def initial_Y(Y0, W, nFeature):
     Y = Y0
     m = W.shape[0]
     start = time.time()
-    Y_YYtd = np.zeros((400,10)) # todo later dont hard code this
+    # import pdb; pdb.set_trace();
+    Y_YYtd = np.zeros(Y0.shape)
     for i in range(len(lambdas)):
         for iter in range(maxIter):
             Y0 = Y
@@ -393,7 +401,8 @@ def initial_Y(Y0, W, nFeature):
             # import pdb; pdb.set_trace();
             
             RelChg = np.linalg.norm(Y - Y0)/math.sqrt(m)
-            print("lambda = %d,  iter = %d, Res = %.6f" % (lambdas[i], iter, RelChg))
+            
+            # print("lambda = %d,  iter = %d, Res = %.6f" % (lambdas[i], iter, RelChg))
 
             if RelChg < tol:
                 break
@@ -551,24 +560,43 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3, verbose=False):
 
     print("Running Proposed Method: lambda=%d, rank=%d, tol_Y=%d, maxIter=%d, maxIter_Y=%d" % (var_lambda, rank, tol_Y, maxIter, maxIter_Y))
 
+    # import pdb; pdb.set_trace()
+
     # print(vM)
     m = vM.shape[0]
     
     nFeature = np.cumsum(nFeature)
     nFeature = np.insert(nFeature, 0, 0)
 
-    # Y = np.random.rand(m, k) # initialize Y randomly, doesn't matter, random guess
+    #Y = np.random.rand(m, k) # initialize Y randomly, doesn't matter, random guess
     # using matlab saved Y as file
-    mat = scipy.io.loadmat("Y.mat")
+    # import pdb; pdb.set_trace()
+    if m == 400:
+        mat = scipy.io.loadmat("Y400.mat")
+    elif m == 500:
+        mat = scipy.io.loadmat("Y500.mat")
+    elif m == 1088:
+        mat = scipy.io.loadmat("Y1088.mat")
+    elif m == 660:
+        mat = scipy.io.loadmat("Y660.mat")
+    elif m == 1080: # weird
+        mat = scipy.io.loadmat("Y1080.mat")
+    else:
+        if not os.path.exists("Y.npy"):
+            Y = np.random.rand(m, k)
+            scipy.io.savemat("Y.mat", {'Y': Y})
+        mat = scipy.io.loadmat("Y.mat")
     Y = np.array(mat['Y'])
 
     start = time.time()
 
-    if os.path.exists("Y.npy"):
-        Y = np.load("Y.npy")
-    else:
-        Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
-        np.save("Y.npy", Y)
+    Y = initial_Y(Y, W, nFeature)
+
+    # if os.path.exists("Y.npy"):
+    #     Y = np.load("Y.npy")
+    # else:
+    #     Y = initial_Y(Y, W, nFeature) # initialize Y by projected gradient descent
+    #     np.save("Y.npy", Y)
 
     # print(Y.shape)
     # import pdb; pdb.set_trace()
@@ -580,12 +608,13 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3, verbose=False):
     C_norm = C / C_norm_factor
     # import pdb; pdb.set_trace()
 
+    X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda)
     # speed up get new X
-    if os.path.exists("X_init.npy"):
-        X = np.load("X_init.npy")
-    else:
-        X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda)
-        np.save("X_init.npy", X)
+    # if os.path.exists("X_init.npy"):
+    #     X = np.load("X_init.npy")
+    # else:
+    #     X,_ = get_newX(U, Y, C_norm, 0, k, rank, nFeature, var_lambda)
+    #     np.save("X_init.npy", X)
 
     # update Y X Z
     Rho = [1e0, 1e1, 1e2]
@@ -634,8 +663,8 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3, verbose=False):
     runtime = stop - start
     iterations = Iter
     XP = X@X.T
-
-    print("Time = %fs, Overall Iter = %d" % (runtime, iterations))
+    if verbose:
+        print("Time = %fs, Overall Iter = %d" % (runtime, iterations))
 
     # import pdb; pdb.set_trace()
 

@@ -183,7 +183,8 @@ class GraphDataset(object):
       if file_idx > self.MAX_IDX:
         file_idx = 0
         if writer: writer.close()
-        writer = tf.python_io.TFRecordWriter(outfile(record_idx))
+        # writer = tf.python_io.TFRecordWriter(outfile(record_idx))
+        writer = tf.io.TFRecordWriter(outfile(record_idx))
         record_idx += 1
       loaded_features = self.gen_sample()
       features = self.process_features(loaded_features)
@@ -213,6 +214,26 @@ class GraphDataset(object):
 
     # And save out a file with the creation time for versioning
     timestamp_file = 'np_test_timestamp.txt'
+    with open(os.path.join(out_dir, timestamp_file), 'w') as date_file:
+      date_file.write('Numpy Dataset created {}'.format(str(datetime.datetime.now())))
+
+  def create_np_dataset(self, out_dir, mode):
+    """Create npz files to store dataset"""
+    params = self.dataset_params
+    num_entries = self.dataset_params.sizes[mode]
+    fname = 'np-{:04d}.npz'
+    outfile = lambda idx: os.path.join(out_dir, fname.format(idx))
+    print('Writing dataset to {}'.format(out_dir))
+    record_idx = 0
+    for index in tqdm.tqdm(range(num_entries)):
+      features = self.gen_sample()
+      np_features = {}
+      for k, v in self.features.items():
+        np_features.update(v.npz_value(features[k]))
+      np.savez(outfile(index), **np_features)
+
+    # And save out a file with the creation time for versioning
+    timestamp_file = f'np_timestamp.txt'
     with open(os.path.join(out_dir, timestamp_file), 'w') as date_file:
       date_file.write('Numpy Dataset created {}'.format(str(datetime.datetime.now())))
 

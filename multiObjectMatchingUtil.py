@@ -144,7 +144,10 @@ def runJointMatch(pMatch, C, method='pg', univsize=10, rank=3, l=1):
         exit()
     elif method == "als":
         print("MatchALS...")
+        #import pdb; pdb.set_trace()
         M_out, eigV, tInfo, iter = matchALS(vM, nFeature, Size)
+        if M_out is None:
+            return None, None, None
         # exit()
     elif method == "pg":
         print("Proposed Method Matching...")
@@ -582,7 +585,7 @@ def proposedMethod(vM, C, nFeature, Size, var_lambda=1, rank=3, verbose=False):
     elif m == 1080: # weird
         mat = scipy.io.loadmat("Y1080.mat")
     else:
-        if not os.path.exists("Y.npy"):
+        if not os.path.exists("Y.mat"):
             Y = np.random.rand(m, k)
             scipy.io.savemat("Y.mat", {'Y': Y})
         mat = scipy.io.loadmat("Y.mat")
@@ -718,7 +721,21 @@ def matchALS(W, nFeature, universeSize, verbose=False):
     n = X.shape[0]
     maxRank = min(n, math.ceil(maxRank))
     # A2 = np.random.random((n, maxRank))
-    mat = scipy.io.loadmat("A_matrix.mat")
+    if n == 400:
+        mat = scipy.io.loadmat("als_A400.mat")
+    elif n == 500:
+        mat = scipy.io.loadmat("als_A500.mat")
+    elif n == 1088:
+        mat = scipy.io.loadmat("als_A1088.mat")
+    elif n == 660:
+        mat = scipy.io.loadmat("als_A660.mat")
+    elif n == 1080: # weird
+        mat = scipy.io.loadmat("als_A1080.mat")
+    else:
+        if not os.path.exists("als_A.mat"):
+            A = np.random.rand((n, maxRank))
+            scipy.io.savemat("als_A.mat", {'A': A})
+        mat = scipy.io.loadmat("als_A.mat")
     A = np.array(mat['A'])
 
     # print(A.shape)
@@ -738,6 +755,7 @@ def matchALS(W, nFeature, universeSize, verbose=False):
         X = Z - (Y.astype(np.float64) - W + beta)/mu
 
         b0 = A.T@A + (alpha/mu) * np.eye(maxRank)
+        #import pdb; pdb.set_trace()
         b1 = A.T@X 
         B = np.linalg.solve(b0, b1).T
 
@@ -800,7 +818,8 @@ def matchALS(W, nFeature, universeSize, verbose=False):
 
     if iterations >= maxIter - 1:
         print("Algorithm terminated at max iterations. Time = %e, Iter = %d, Res = (%e,%e), mu = %self.fail('message')" % (runtime, iterations, pRes, dRes, mu))
-        exit()
+        #exit()
+        return None, None, None, None
 
     eigenvalues = np.linalg.eig(X)
     ind = np.nonzero(X>0.5)

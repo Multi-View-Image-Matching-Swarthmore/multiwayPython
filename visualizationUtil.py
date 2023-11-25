@@ -8,7 +8,7 @@ import matplotlib.cm as cm
 
 from classes import pairwiseMatches, jointMatchInfo
 
-def visualizePMatch(datapath, pMatch, mode=1):
+def visualizePMatch(datapath, pMatch, method):
 
     if pMatch.X is None:
         return None
@@ -41,9 +41,9 @@ def visualizePMatch(datapath, pMatch, mode=1):
     img1filename = os.path.basename(view1filename).replace(".png.hypercols_kpts.mat", "")
     img2filename = os.path.basename(view2filename).replace(".png.hypercols_kpts.mat", "")
 
-    saveImages(view1mat['img'], view2mat['img'], feat1, feat2, img1filename, img2filename, datapath)
+    saveImages(view1mat['img'], view2mat['img'], feat1, feat2, img1filename, img2filename, datapath, method)
 
-def saveImages(img1, img2, feat1, feat2, f1, f2, datapath):
+def saveImages(img1, img2, feat1, feat2, f1, f2, datapath, method):
     num_features = feat1.shape[1]
     colors = cm.rainbow(np.linspace(0, 1, num_features))
     imgs = [img1, img2]
@@ -57,7 +57,12 @@ def saveImages(img1, img2, feat1, feat2, f1, f2, datapath):
     for i in range(2):
         axs[i].imshow(imgs[i])
         for j in range(num_features):
-            axs[i].scatter(feats[i][0, j], feats[i][1, j], s= 100, color=(1, 0, 0), marker=f"${j}$")
+            px = feats[i][0, j]
+            py = feats[i][1, j]
+            axs[i].scatter(px, py, s= 100, color=(0, 0, 0), marker=f"${j}$")
+            axs[i].scatter(px+1, py+1, s= 100, color=(0.9, 0.6, 0.1), marker=f"${j}$")
     fig.suptitle(f"{f1}, {f2} Matches")
-    plt.savefig(f"results/WILLOW/{datapath}/{f1}-{f2}.png")
+    if not os.path.exists(f"results/WILLOW/{datapath}/{method}"):
+        os.makedirs(f"results/WILLOW/{datapath}/{method}")
+    plt.savefig(f"results/WILLOW/{datapath}/{method}/{f1}-{f2}.png")
     plt.close(fig)

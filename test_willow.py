@@ -15,15 +15,24 @@ from tqdm import tqdm
 # all the image classes
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
 showmatch = True
-method = 'pg' # als, pg
+method = 'als'#'pg' # als, pg
+numImagesOutput = 5
 
 def main():
     # Load Data
     
     # which image sets to use
-    classesToRun = ["Winebottle"] #classes 
+    classesToRun = classes 
+    #classesToRun = ["Winebottle"]
+    #classesToRun = ["Car"] 
 
-    for c in classesToRun:
+    numClasses = len(classesToRun)
+
+    overlaps = np.zeros((numClasses, 2))
+    precisions =  np.zeros((numClasses, 2))
+    recalls =  np.zeros((numClasses, 2))
+
+    for index, c in enumerate(classesToRun):
         print(f"\nRunning {c}")
         # set variables
         viewList = []
@@ -93,6 +102,8 @@ def main():
         print("Multi Object Matching")
 
         jMatch,jmInfo,tInfo = runJointMatch(pMatch,C,method=method,univsize=10,rank=3,l=1)
+        if jMatch is None:
+            continue
         # TEMP COMMENT TO DEBUG, rememeber to remove -ere 9/17/2023
         np.save("jMatch", jMatch, allow_pickle=True)
         np.save("jmInfo", jmInfo, allow_pickle=True)
@@ -173,15 +184,28 @@ def main():
         print(f"X1: {o1}, {p1}, {r1}")
         print(f"X2: {o2}, {p2}, {r2}")
 
+        overlaps[index] = [o1, o2]
+        precisions[index] = [p1, p2]
+        recalls[index] = [r1, r2]
+
         print("Saving images...")
         # TODO: Visualize results -> how?
         if showmatch:
-            for i in tqdm(range(pMatch.shape[0])[:1]):
-                for j in range(i + 1, pMatch.shape[1]):
+            for i in tqdm(range(pMatch.shape[0])[:numImagesOutput]):
+                for j in range(i + 1, pMatch.shape[1])[:numImagesOutput]:
                     if not pMatch[i,j].X is None:
-                        visualizePMatch(datapath, pMatch[i,j]) # mode=3?
+                        visualizePMatch(datapath, pMatch[i,j], method) # mode=3?
 
         print(f"Finished {c}!")
+
+    print("Overlap Scores (X1, X2):")
+    print(overlaps)
+
+    print("Precision Scores (X1, X2):")
+    print(precisions)
+
+    print("Recall Scores (X1, X2):")
+    print(recalls)
 
 def checkMatlabJMatch(py, matlab):
     tcount, jcount = 0, 0

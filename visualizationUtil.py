@@ -59,8 +59,9 @@ def saveImages(img1, img2, feat1, feat2, f1, f2, datapath, method):
         for j in range(num_features):
             px = feats[i][0, j]
             py = feats[i][1, j]
-            axs[i].scatter(px, py, s= 100, color=(0, 0, 0), marker=f"${j}$")
-            axs[i].scatter(px+1, py+1, s= 100, color=(0.9, 0.6, 0.1), marker=f"${j}$")
+            axs[i].scatter(px, py, s= 240, color=(1, 1, 1), marker="s")
+            #axs[i].scatter(px+1, py+1, s= 200, color=(0.9, 0.6, 0.1), marker=f"${j}$")
+            axs[i].scatter(px, py, s= 190, color=(0.3, 0.1, 1.0), marker=f"${j}$")
     fig.suptitle(f"{f1}, {f2} Matches")
     if not os.path.exists(f"results/WILLOW/{datapath}/{method}"):
         os.makedirs(f"results/WILLOW/{datapath}/{method}")

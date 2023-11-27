@@ -15,16 +15,16 @@ from tqdm import tqdm
 # all the image classes
 classes = ["Car", "Duck", "Face", "Motorbike", "Winebottle"]
 showmatch = True
-method = 'als'#'pg' # als, pg
+method = 'pg'#'pg' # als, pg
 numImagesOutput = 5
 
 def main():
     # Load Data
     
     # which image sets to use
-    classesToRun = classes 
+    #classesToRun = classes 
     #classesToRun = ["Winebottle"]
-    #classesToRun = ["Car"] 
+    classesToRun = ["Duck"] 
 
     numClasses = len(classesToRun)
 
